@@ -1,15 +1,14 @@
+#------------------------------------------------------------------------------
+#------ PLY finctions for writing and converting ------------------------------
+#----------- Loic Landrieu Dec. 2017 ------------------------------------------
+#------------------------------------------------------------------------------
 import random
+import glob
 from plyfile import PlyData, PlyElement
 import numpy as np
 import h5py
 from numpy import genfromtxt
 from sklearn.neighbors import NearestNeighbors
-#------------------------------------------------------------------------------
-#------ PLY finctions for writing and converting ------------------------------
-#----------- Loic Landrieu Dec. 2017 ------------------------------------------
-#------------------------------------------------------------------------------
-#
-#
 #------------------------------------------------------------------------------
 #---------- partition2ply ---------------------------------------------------
 #----- write a ply with random colors for each components ---------------------
@@ -20,7 +19,21 @@ def partition2ply(filename, xyz, components):
     for i_com in range(0,len(components)):
         color[components[i_com],:] = [r(), r(), r()]
     prop=[('x', 'f4'),('y', 'f4'), ('z', 'f4'),('red', 'u1'),('green', 'u1'), ('blue', 'u1')]
-    vertex_all = numpy.empty(len(xyz),dtype=prop)
+    vertex_all = np.empty(len(xyz),dtype=prop)
+    for i in range(0,3):
+        vertex_all[prop[i][0]] = xyz[:,i]
+    for i in range(0,3):
+        vertex_all[prop[i+3][0]] = color[:,i]
+    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+    ply.write(filename)
+#------------------------------------------------------------------------------
+#---------- geof2ply ----------------------------------------------------------
+#----- write a ply with colors corresponding to geometric features ------------
+#------------------------------------------------------------------------------
+def geopf2ply(filename, xyz, geof):
+    color = np.array(255 * geof[:, [0, 1, 3]], dtype = 'uint8')
+    prop=[('x', 'f4'),('y', 'f4'), ('z', 'f4'),('red', 'u1'),('green', 'u1'), ('blue', 'u1')]
+    vertex_all = np.empty(len(xyz),dtype=prop)
     for i in range(0,3):
         vertex_all[prop[i][0]] = xyz[:,i]
     for i in range(0,3):
@@ -34,9 +47,9 @@ def partition2ply(filename, xyz, components):
 def prediction2ply(filename, xyz, prediction, n_label):
     color = np.zeros(xyz.shape)
     for i_label in range(0, n_label + 1):
-		color[np.where(prediction==i_label),:] = get_color_from_label(i_label)
+	    color[np.where(prediction==i_label),:] = get_color_from_label(i_label)
     prop=[('x', 'f4'),('y', 'f4'), ('z', 'f4'),('red', 'u1'),('green', 'u1'), ('blue', 'u1')]
-    vertex_all = numpy.empty(len(xyz),dtype=prop)
+    vertex_all = np.empty(len(xyz),dtype=prop)
     for i in range(0,3):
         vertex_all[prop[i][0]] = xyz[:,i]
     for i in range(0,3):
@@ -62,7 +75,7 @@ def object_name_to_label(object_class):
             'sofa': 11,
             'board': 12,
             'clutter': 13,
-            'stairs': 13,
+            'stairs': 0,
         }.get(object_class, 0)
     if (object_label==0):
          raise ValueError('Type not recognized: %s' % (object_class))
@@ -98,13 +111,13 @@ def get_color_from_label(object_label, n_label):
 #------------------------------------------------------------------------------
 def get_objects(raw_path):
     room_ver = genfromtxt(raw_path, delimiter=' ')
-    xyz = np.array(room_ver[:,0:3], dtype = 'float')
-    rgb = np.array(room_ver[:,3:6], dtype = 'float')
+    xyz = np.array(room_ver[:,0:3], dtype = 'float32')
+    rgb = np.array(room_ver[:,3:6], dtype = 'float32')
     n_ver = len(room_ver)
     nn = NearestNeighbors(1, algorithm='kd_tree').fit(xyz)
     room_labels = np.zeros((n_ver,), dtype = 'uint8')
     room_object_indices = np.zeros((n_ver,), dtype = 'uint32')
-    objects = glob.glob(room_folder + "Annotations/*.txt")
+    objects = glob.glob(raw_path + "Annotations/*.txt")
     i_object = 0
     for single_object in objects:
         object_name = os.path.splitext(os.path.basename(single_object))[0]
@@ -121,11 +134,13 @@ def get_objects(raw_path):
 #---------- write_ply_obj -----------------------------------------------------
 #----- convert to a ply file. include the label and the object number----------
 #------------------------------------------------------------------------------
-def write_room_ply_obj(filename, xyz, labels, object_indices):
+def write_ply_obj(filename, xyz, rgb, labels, object_indices):
     prop=[('x', 'f4'),('y', 'f4'), ('z', 'f4'),('red', 'u1'),('green', 'u1'), ('blue', 'u1'), ('label', 'u1') , ('object_index', 'uint32')]
-    vertex_all = numpy.empty(len(room_ver),dtype=prop)
-    for i_prop in range(0,6):
-        vertex_all[prop[i_prop][0]] = xyz[:,i_prop]
+    vertex_all = np.empty(len(xyz),dtype=prop)
+    for i_prop in range(0,3):
+    	vertex_all[prop[i_prop][0]] = xyz[:,i_prop]
+    for i_prop in range(0,3):
+        vertex_all[prop[i_prop+3][0]] = rgb[:,i_prop]
     vertex_all[prop[6][0]] = labels
     vertex_all[prop[7][0]] = object_indices
     ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
@@ -134,14 +149,16 @@ def write_room_ply_obj(filename, xyz, labels, object_indices):
 #---------- write_ply -------- ------------------------------------------------
 #----- convert to a ply file. include the label -------------------------------
 #------------------------------------------------------------------------------
-def write_room_ply(filename, xyz, labels, object_indices):
-    prop=[('x', 'f4'),('y', 'f4'), ('z', 'f4'),('red', 'u1'),('green', 'u1'), ('blue', 'u1'), ('label', 'u1')]
-    vertex_all = numpy.empty(len(room_ver),dtype=prop)
-    for i_prop in range(0,6):
-        vertex_all[prop[i_prop][0]] = xyz[:,i_prop]
-    vertex_all[prop[6][0]] = labels  
-    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
-    ply.write(filename)
+def write_ply(filename, xyz, rgb, labels):
+	prop=[('x', 'f4'),('y', 'f4'), ('z', 'f4'),('red', 'u1'),('green', 'u1'), ('blue', 'u1'), ('label', 'u1')]
+	vertex_all = np.empty(len(xyz),dtype=prop)
+	for i_prop in range(0,3):
+		vertex_all[prop[i_prop][0]] = xyz[:,i_prop]
+	for i_prop in range(0,3):
+		vertex_all[prop[i_prop+3][0]] = rgb[:,i_prop]
+	vertex_all[prop[6][0]] = labels  
+	ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+	ply.write(filename)
 #------------------------------------------------------------------------------
 #---------- read_ply -------- ------------------------------------------------
 #----- convert from a ply file. include the label and the object number -------
@@ -153,7 +170,7 @@ def read_ply(filename):
 	try:
 		rgb = np.stack([ plydata['vertex'][n] for n in ['red', 'green', 'blue'] ], axis=1).astype(np.float32)
 	except ValueError:
-		rgb = np.stack([ plydata['vertex'][n] for n in ['r', 'g', 'b'] ], axis=1).astype(np.float)
+		rgb = np.stack([ plydata['vertex'][n] for n in ['r', 'g', 'b'] ], axis=1).astype(np.float32)
 	if (np.max(rgb)>1):
 		rgb = rgb / 255.
 		labels = plydata['vertex']['label']
@@ -163,40 +180,46 @@ def read_ply(filename):
 	except ValueError:
 		return xyz, rgb, labels
 #------------------------------------------------------------------------------
-#---------- write_room_descriptors --------------------------------------------
-#----- write the descriptors in a h5 file -------------------------------------
+#---------- write_room_geof --------------------------------------------
+#----- write the geometric features in a h5 file ------------------------------
 #------------------------------------------------------------------------------
-def write_descriptors(file_name, desc, graph_nn):
+def write_geof(file_name, geof, xyz, rgb, graph_nn):
     data_file = h5py.File(file_name, 'w')
-    data_file.create_dataset('linearity'  , data=desc[:,0], dtype = 'float32')
-    data_file.create_dataset('planarity'  , data=desc[:,1], dtype = 'float32')
-    data_file.create_dataset('scattering' , data=desc[:,2], dtype = 'float32')
-    data_file.create_dataset('verticality', data=desc[:,3], dtype = 'float32')
+    data_file.create_dataset('linearity'  , data=geof[:,0], dtype = 'float32')
+    data_file.create_dataset('planarity'  , data=geof[:,1], dtype = 'float32')
+    data_file.create_dataset('scattering' , data=geof[:,2], dtype = 'float32')
+    data_file.create_dataset('verticality', data=geof[:,3], dtype = 'float32')
     data_file.create_dataset('source'     , data=graph_nn["source"], dtype = 'uint32')
     data_file.create_dataset('target'     , data=graph_nn["target"], dtype = 'uint32')
+    data_file.create_dataset('distances'  , data=graph_nn["distances"], dtype = 'float32')
+    data_file.create_dataset('xyz'        , data=xyz, dtype = 'float32')
+    data_file.create_dataset('rgb'        , data=rgb, dtype = 'float32')
     data_file.close()
 #------------------------------------------------------------------------------
-#---------- read_descriptors --------------------------------------------------
-#----- read the descriptors from a h5 file ------------------------------------
+#---------- read_geof ---------------------------------------------------------
+#----- read the geometric features from a h5 file -----------------------------
 #------------------------------------------------------------------------------
-def read_descriptors(file_name):
+def read_geof(file_name):
     data_file = h5py.File(file_name, 'r')
     linearity = data_file["linearity"]
     n_ver = len(linearity)
-    desc = np.zeros((n_ver,4), dtype = 'float32')
-    desc[:,0] = linearity
-    desc[:,1] = data_file["planarity"]
-    desc[:,2] = data_file["scattering"]
-    desc[:,3] = data_file["verticality"]
+    geof = np.zeros((n_ver,4), dtype = 'float32')
+    geof[:,0] = linearity
+    geof[:,1] = data_file["planarity"]
+    geof[:,2] = data_file["scattering"]
+    geof[:,3] = data_file["verticality"]
     n_edg = len(data_file["source"])
-    source = np.zeros((n_edg,1), dtype = 'uint32')
-    target = np.zeros((n_edg,1), dtype = 'uint32')
+    source = np.zeros((n_edg,), dtype = 'uint32')
+    target = np.zeros((n_edg,), dtype = 'uint32')
+    distances = np.zeros((n_edg,), dtype = 'float32')
     source[:] = data_file["source"]
     target[:] = data_file["target"]
+    distances[:] = data_file["distances"]
     graph = dict([("is_nn", True)])
     graph["source"] = source
     graph["target"] = target	
-    return desc, graph
+    graph["distances"] = distances
+    return geof, graph
 #------------------------------------------------------------------------------
 #---------- write_spg ---------------------------------------------------------
 #----- save the partition and spg information ---------------------------------
@@ -209,7 +232,7 @@ def write_spg(file_name, graph_sp, components, in_component):
     for i_com in range(0,n_com):
         grp.create_dataset(str(i_com),data=components[i_com], dtype = 'uint32')
     data_file.create_dataset('in_component',data=in_component, dtype = 'uint32')
-    data_file.create_dataset('sp_labels',data=graph_sp["sp_labels"], dtype = 'uint8')
+    data_file.create_dataset('sp_labels',data=graph_sp["sp_labels"], dtype = 'uint32')
     data_file.create_dataset('sp_centroids',data=graph_sp["sp_centroids"], dtype = 'float32')
     data_file.create_dataset('sp_length',data=graph_sp["sp_length"], dtype = 'float32')
     data_file.create_dataset('sp_surface',data=graph_sp["sp_surface"], dtype = 'float32')
@@ -238,7 +261,7 @@ def read_spg(file_name):
     graph["sp_length"] = np.array(data_file["sp_length"], dtype = 'float32')
     graph["sp_surface"] = np.array(data_file["sp_surface"], dtype = 'float32')
     graph["sp_volume"] = np.array(data_file["sp_volume"], dtype = 'float32')
-    graph["sp_point_count"] = np.array(data_file["sp_point_count"], dtype = 'float32')
+    graph["sp_point_count"] = np.array(data_file["sp_point_count"], dtype = 'uint32')
     graph["se_delta_mean"] = np.array(data_file["se_delta_mean"], dtype = 'float32')
     graph["se_delta_std"] = np.array(data_file["se_delta_std"], dtype = 'float32')
     graph["se_delta_norm"] = np.array(data_file["se_delta_norm"], dtype = 'float32')
@@ -249,10 +272,10 @@ def read_spg(file_name):
     graph["se_point_count_ratio"] = np.array(data_file["se_point_count_ratio"], dtype = 'float32')
     in_component = np.array(data_file["in_component"], dtype = 'uint32')
     n_com = len(graph["sp_length"])
-    graph["sp_labels"]  = np.array(data_file["sp_labels"], dtype = 'uint8')
+    graph["sp_labels"]  = np.array(data_file["sp_labels"], dtype = 'uint32')
     grp = data_file['components']
     components = np.empty((n_com,), dtype = object)
     for i_com in range(0,n_com):
         components[i_com] = np.array(grp[str(i_com)], dtype = 'uint32').tolist()
     return graph, components, in_component
-
+ 

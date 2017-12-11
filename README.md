@@ -7,19 +7,37 @@ This is the official PyTorch implementation of our paper *Large-scale Point Clou
 
 
 ## Code structure
-* `./?????` - Partition code (geometric partitioning and superpoint graph construction)
+* `./partition/*` - Partition code (geometric partitioning and superpoint graph construction)
 * `./learning/*` - Learning code (superpoint embedding and contextual segmentation).
 
 
 ## Requirements
 
-1. Install [PyTorch](https://pytorch.org) and then [torchnet](https://github.com/pytorch/tnt) with `pip install git+https://github.com/pytorch/tnt.git@master`.
+1. Install [PyTorch](https://pytorch.org), [visdom](https://anaconda.org/conda-forge/visdom) with ```conda install -c conda-forge visdom``` and finally [torchnet](https://github.com/pytorch/tnt) with `pip install git+https://github.com/pytorch/tnt.git@master`.
 
-2. Install additional Python packages: `pip install future python-igraph tqdm transforms3d pynvrtc cupy h5py sklearn`.
+2. Install additional Python packages: `pip install future python-igraph tqdm transforms3d pynvrtc cupy h5py sklearn plyfile`.
 
+3. Update Boost to version 1.63.0 or newer, in Conda: `conda install -c anaconda boost`
+
+4. Install [cut pursuit](https://github.com/loicland/cut-pursuit) in ```./partition/```.Compile the ```libply_c``` and ```libcp``` libraries in /partition/
+```
+cd ply_c
+cmake .
+make
+cd ..
+cd cut-pursuit
+cmake .
+make
+```
 The code was tested on Ubuntu 14.04 with Python 3.6 and PyTorch 0.2.
 
+## Partition
 
+### S3DIS
+
+To compute the partition run
+
+```python partition_S3DIS.py```
 
 ## Learning
 

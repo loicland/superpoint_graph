@@ -1,14 +1,11 @@
-import numpy as np
-import numpy.matlib
-from itertools import compress
-from sklearn.neighbors import NearestNeighbors
-from scipy.spatial import Delaunay
-from numpy import linalg as LA
-
 #------------------------------------------------------------------------------
 #---------  Graph methods for SuperPoint Graph   ------------------------------
 #---------     Loic Landrieu, Dec. 2017     -----------------------------------
 #------------------------------------------------------------------------------
+import numpy as np
+from sklearn.neighbors import NearestNeighbors
+from scipy.spatial import Delaunay
+from numpy import linalg as LA
 #---------------------------------------
 #---      compute the knn graph      ---
 #---------------------------------------
@@ -21,13 +18,11 @@ def compute_graph_nn(xyz, k_nn):
     distances, neighbors = nn.kneighbors(xyz)
     neighbors  = neighbors[:,1:]
     distances  = distances[:,1:]
-    source     = np.matlib.repmat(range(0,num_ver), k_nn, 1).reshape(k_nn * num_ver,1, order='F')
-    target     = np.transpose(neighbors.reshape(1,k_nn * num_ver))
-    distances = np.reshape(distances, (k_nn * num_ver, 1))
+    source     = np.matlib.repmat(range(0,num_ver), k_nn, 1).flatten(order='F')
     #save the graph               
-    graph["source"] = np.array(source, dtype = 'uint32')
-    graph["target"] = np.array(target, dtype = 'uint32')
-    graph["distances"] = distances
+    graph["source"] = source.flatten().astype('uint32')
+    graph["target"] = neighbors.flatten().astype('uint32')
+    graph["distances"] = distances.flatten().astype('float32')
     return graph
 #---------------------------------------
 #---      compute 2 knn graph      -----
@@ -35,27 +30,23 @@ def compute_graph_nn(xyz, k_nn):
 #--- assumption : knn1 <= knn2   -------
 #---------------------------------------
 def compute_graph_nn_2(xyz, k_nn1, k_nn2):
-    assert k_nn1 <= k_nn2, "knn1 must be smaller than knn2"
-    num_ver = xyz.shape[0]
-    #compute nearest neighbors
-    graph = dict([("is_nn", True)])
-    nn = NearestNeighbors(n_neighbors=k_nn2+1, algorithm='kd_tree').fit(xyz)
-    #---knn1-----
-    distances, neighbors = nn.kneighbors(xyz)
-    neighbors  = neighbors[:,1:k_nn1+1]
-    distances  = distances[:,1:k_nn1+1]
-    source     = np.matlib.repmat(range(0,num_ver), k_nn1, 1).reshape(k_nn1 * num_ver,1, order='F')
-    target     = np.transpose(neighbors.reshape(1,k_nn1 * num_ver))
-    distances = np.reshape(distances, (k_nn1 * num_ver, 1))
-    #---knn2-----
-    distances, neighbors = nn.kneighbors(xyz)
-    neighbors  = neighbors[:,1:]
-    target2    = np.transpose(neighbors.reshape(1,k_nn2 * num_ver))
-    #save the graph               
-    graph["source"] = np.array(source, dtype = 'uint32')
-    graph["target"] = np.array(target, dtype = 'uint32')
-    graph["distances"] = distances            
-    return graph, target2
+	assert k_nn1 <= k_nn2, "knn1 must be smaller than knn2"
+	num_ver = xyz.shape[0]
+	#compute nearest neighbors
+	graph = dict([("is_nn", True)])
+	nn = NearestNeighbors(n_neighbors=k_nn2+1, algorithm='kd_tree').fit(xyz)
+	distances, neighbors = nn.kneighbors(xyz)
+	del nn
+	#---knn2---
+	target2    = (neighbors[:,1:].flatten()).astype('uint32')      
+	#---knn1-----
+	neighbors  = neighbors[:,1:k_nn1+1]
+	distances  = distances[:,1:k_nn1+1]
+	#save the graph   
+	graph["source"] = np.matlib.repmat(range(0,num_ver), k_nn1, 1).flatten( order='F').astype('uint32')
+	graph["target"] = np.transpose(neighbors.flatten(order='C')).astype('uint32')
+	graph["distances"] = distances.flatten().astype('float32')  
+	return graph, target2
 #
 #-------------------------------------------------------------------------------
 #
@@ -64,7 +55,6 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
     #---      compute the superpoint graph      ---
     #---with superpoints and superedges features---
     #----------------------------------------------
-    n_ver = len(xyz)
     n_com = max(in_component)+1
     #---compute delaunay triangulation---
     tri = Delaunay(xyz)
@@ -102,7 +92,7 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
     edge_comp = edge_comp[:,order]
     edge_comp_index = edge_comp_index[order]
     #marks where the edges change components iot compting them by blocks
-    jump_edg = np.vstack((0,np.argwhere(np.diff(edge_comp_index)) + 1, n_edg))
+    jump_edg = np.vstack((0,np.argwhere(np.diff(edge_comp_index)) + 1, n_edg)).flatten()
     n_sedg   = len(jump_edg)-1
     #---set up the edges descriptors---
     graph = dict([("is_nn", False)])
@@ -126,20 +116,34 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
     for i_com in range(0,n_com):
         comp = components[i_com]
         graph["sp_labels"][i_com,:] = np.histogram(labels[comp], bins = [float(i)-0.5 for i in (range(0,13+2))])[0]
-        xyz_sp  = xyz[comp,:]
-        ev = LA.eig(np.cov(np.transpose(xyz_sp), rowvar = True))
-        ev = -np.sort(-ev[0]) #descending order
-        graph["sp_point_count"][i_com] = len(comp)
-        if (len(comp)>1):
-            graph["sp_centroids"][i_com] = np.mean(xyz_sp, axis = 0)
-            graph["sp_length"][i_com]  =   ev[0]
-            graph["sp_surface"][i_com] =   np.sqrt(ev[0] * ev[1])
-            graph["sp_volume"][i_com]  =   np.cbrt(ev[0] * ev[1] * ev[2])
-        else:
+        graph["sp_point_count"][i_com] = len(comp) 
+        xyz_sp  = np.unique(xyz[comp,:], axis = 0)
+        if (len(xyz_sp)==1):
             graph["sp_centroids"][i_com] = xyz_sp
             graph["sp_length"][i_com] = 0
             graph["sp_surface"][i_com] = 0
-            graph["sp_volume"][i_com]  = 0    
+            graph["sp_volume"][i_com]  = 0 
+        elif (len(xyz_sp)==2):
+            graph["sp_centroids"][i_com] = np.mean(xyz_sp, axis = 0)
+            graph["sp_length"][i_com]    = np.sqrt(np.sum(np.var(xyz_sp, axis = 0)))
+            graph["sp_surface"][i_com]   =  0
+            graph["sp_volume"][i_com]    =  0
+        else:
+            ev = LA.eig(np.cov(np.transpose(xyz_sp), rowvar = True))
+            ev = -np.sort(-ev[0]) #descending order
+            graph["sp_centroids"][i_com] = np.mean(xyz_sp, axis = 0)
+            try:
+                graph["sp_length"][i_com]  = ev[0]
+            except TypeError:
+                graph["sp_length"][i_com]  = 0
+            try:
+                graph["sp_surface"][i_com] = np.sqrt(ev[0] * ev[1])
+            except TypeError:
+                graph["sp_surface"][i_com] = 0
+            try:
+                graph["sp_volume"][i_com]  = np.cbrt(ev[0] * ev[1] * ev[2])
+            except TypeError:
+                graph["sp_volume"][i_com]  = 0
     #---compute the superedges features---
     for i_sedg in range(0,n_sedg):
         i_edg_begin = jump_edg[i_sedg]
