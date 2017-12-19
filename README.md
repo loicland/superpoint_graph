@@ -15,11 +15,11 @@ This is the official PyTorch implementation of our paper *Large-scale Point Clou
 
 1. Install [PyTorch](https://pytorch.org), [visdom](https://anaconda.org/conda-forge/visdom) with ```conda install -c conda-forge visdom``` and finally [torchnet](https://github.com/pytorch/tnt) with `pip install git+https://github.com/pytorch/tnt.git@master`.
 
-2. Install additional Python packages: `pip install future python-igraph tqdm transforms3d pynvrtc cupy h5py sklearn plyfile`.
+2. Install additional Python packages: `pip install future python-igraph tqdm transforms3d pynvrtc cupy h5py sklearn plyfile scipy`.
 
 3. Update Boost to version 1.63.0 or newer, in Conda: `conda install -c anaconda boost`
 
-4. Install [cut pursuit](https://github.com/loicland/cut-pursuit) in ```./partition/```.Compile the ```libply_c``` and ```libcp``` libraries in /partition/
+4. Compile the ```libply_c``` and ```libcp``` libraries in /partition/
 ```
 cd ply_c
 cmake .
@@ -38,6 +38,14 @@ The code was tested on Ubuntu 14.04 with Python 3.6 and PyTorch 0.2.
 To compute the partition run
 
 ```python partition_S3DIS.py```
+
+### Semantic3D
+
+To compute the partition run
+
+```python partition_Semantic3D.py```
+
+It is recommended that you have at least 24GB of RAM to run this code. Otherwise, either use swap memory of increase the ```voxel_width``` parameter to increase pruning.
 
 ## Learning
 
@@ -66,34 +74,3 @@ CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --epochs 450 --l
 ```
 
 Note that you can use `--SEMA3D_PATH` argument to set path to the pre-processed dataset.
-
-
-
-### S3DIS
-
-To train on the all 6 folds, run
-
-```
-for FOLD in 1 2 3 4 5 6; do \
-CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset s3dis --cvfold $FOLD --epochs 350 --lr_steps '[275,320]' \
---test_nth_epoch 50 --model_config 'gru_10,f_13' --ptn_nfeat_stn 14 --nworkers 2 --odir "results/s3dis/best/cv${FOLD}"; \
-done
-```
-
-The trained networks can be downloaded [here](http://imagine.enpc.fr/~simonovm/largescale/models_s3dis.zip), unzipped and loaded with `--resume` argument.
-
-Note that you can use `--S3DIS_PATH` argument to set path to the pre-processed dataset.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
