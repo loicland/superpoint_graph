@@ -95,7 +95,7 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
     graph["sp_length"] = np.zeros((n_com, 1), dtype='float32')
     graph["sp_surface"] = np.zeros((n_com, 1), dtype='float32')
     graph["sp_volume"] = np.zeros((n_com, 1), dtype='float32')
-    graph["sp_point_count"] = np.zeros((n_com, 1), dtype='float32')
+    graph["sp_point_count"] = np.zeros((n_com, 1), dtype='uint64')
     graph["source"] = np.zeros((n_sedg, 1), dtype='uint32')
     graph["target"] = np.zeros((n_sedg, 1), dtype='uint32')
     graph["se_delta_mean"] = np.zeros((n_sedg, 3), dtype='float32')
@@ -107,7 +107,7 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
     graph["se_volume_ratio"] = np.zeros((n_sedg, 1), dtype='float32')
     graph["se_point_count_ratio"] = np.zeros((n_sedg, 1), dtype='float32')
     if has_labels:
-        graph["sp_labels"] = np.zeros((n_com, n_labels + 1), dtype='uint8')
+        graph["sp_labels"] = np.zeros((n_com, n_labels + 1), dtype='uint32')
     else:
         graph["sp_labels"] = []
     #---compute the superpoint features---

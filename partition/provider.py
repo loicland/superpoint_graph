@@ -1,5 +1,5 @@
 #------------------------------------------------------------------------------
-#------ PLY finctions for writing and converting ------------------------------
+#------ PLY functions for writing and converting ------------------------------
 #----------- Loic Landrieu Dec. 2017 ------------------------------------------
 #------------------------------------------------------------------------------
 import os
@@ -276,7 +276,7 @@ def write_spg(file_name, graph_sp, components, in_component):
     data_file.create_dataset('sp_volume'
                              , data=graph_sp["sp_volume"], dtype='float32')
     data_file.create_dataset('sp_point_count'
-                             , data=graph_sp["sp_point_count"], dtype='float32')
+                             , data=graph_sp["sp_point_count"], dtype='uint64')
     data_file.create_dataset('source'
                              , data=graph_sp["source"], dtype='uint32')
     data_file.create_dataset('target'
@@ -308,7 +308,7 @@ def read_spg(file_name):
     graph["sp_length"] = np.array(data_file["sp_length"], dtype='float32')
     graph["sp_surface"] = np.array(data_file["sp_surface"], dtype='float32')
     graph["sp_volume"] = np.array(data_file["sp_volume"], dtype='float32')
-    graph["sp_point_count"] = np.array(data_file["sp_point_count"], dtype='uint32')
+    graph["sp_point_count"] = np.array(data_file["sp_point_count"], dtype='uint64')
     graph["se_delta_mean"] = np.array(data_file["se_delta_mean"], dtype='float32')
     graph["se_delta_std"] = np.array(data_file["se_delta_std"], dtype='float32')
     graph["se_delta_norm"] = np.array(data_file["se_delta_norm"], dtype='float32')

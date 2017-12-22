@@ -74,3 +74,7 @@ CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --epochs 450 --l
 ```
 
 Note that you can use `--SEMA3D_PATH` argument to set path to the pre-processed dataset.
+
+# Licence
+
+SPGraph is under a dual GPL3.0 / commercial license. If you want to use SPGraph for commercial, non-GPL use, contact us about commercial licensing, which will be determined on a case-by-case basis.
