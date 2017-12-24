@@ -98,7 +98,7 @@ class GRUCellEx(nn.GRUCell):
             input = nnf.sigmoid(self._modules['ig'](hidden)) * input
 
         # GRUCell in https://github.com/pytorch/pytorch/blob/master/torch/nn/_functions/rnn.py extended with layer normalization
-        if input.is_cuda:
+        if torch.__version__=='0.2.0' and input.is_cuda: #do not work with 0.3
             gi = nnf.linear(input, self.weight_ih)
             gh = nnf.linear(hidden, self.weight_hh)
             gi, gh = self._normalize(gi, gh)

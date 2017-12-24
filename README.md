@@ -17,29 +17,57 @@ This is the official PyTorch implementation of our paper *Large-scale Point Clou
 
 2. Install additional Python packages: `pip install future python-igraph tqdm transforms3d pynvrtc cupy h5py sklearn plyfile scipy`.
 
-3. Update Boost to version 1.63.0 or newer, in Conda: `conda install -c anaconda boost`
+3. Install Boost (1.63.0 or newer) and Eigen3, in Conda: `conda install -c anaconda boost; conda install -c omnia eigen3`
 
-4. Compile the ```libply_c``` and ```libcp``` libraries in /partition/
+4. Compile the ```libply_c``` and ```libcp``` libraries:
 ```
-cd ply_c
-cmake .
+cd partition/ply_c
+cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.6m -DBOOST_INCLUDEDIR=$CONDAENV/include -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
 make
 cd ..
 cd cut-pursuit
-cmake .
+cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.6m -DBOOST_INCLUDEDIR=$CONDAENV/include  -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
 make
 ```
-The code was tested on Ubuntu 14.04 with Python 3.6 and PyTorch 0.2.
+where `$CONDAENV` is the path to your conda environment. The code was tested on Ubuntu 14.04 with Python 3.6 and PyTorch 0.2.
 
-## Partition
+## S3DIS
 
-### S3DIS
+Download [S3DIS Dataset](http://buildingparser.stanford.edu/dataset.html) and extract `Stanford3dDataset_v1.2_Aligned_Version.zip` to `$S3DIR_DIR/data`.
+
+### Partition
 
 To compute the partition run
 
-```python partition_S3DIS.py```
+```cd partition; python partition_S3DIS.py --S3DIS_PATH $S3DIR_DIR```
 
-### Semantic3D
+### Training
+
+First, reorganize point clouds into superpoints by:
+
+```python learning/s3dis_dataset.py --S3DIS_PATH $S3DIR_DIR```
+
+To train on the all 6 folds, run
+```
+for FOLD in 1 2 3 4 5 6; do \
+CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset s3dis --S3DIS_PATH $S3DIR_DIR --cvfold $FOLD --epochs 350 --lr_steps '[275,320]' \
+--test_nth_epoch 50 --model_config 'gru_10,f_13' --ptn_nfeat_stn 14 --nworkers 2 --odir "results/s3dis/best/cv${FOLD}"; \
+done
+```
+The trained networks can be downloaded [here](http://imagine.enpc.fr/~simonovm/largescale/models_s3dis.zip), unzipped and loaded with `--resume` argument.
+
+To test this network on the full test set, run
+```
+for FOLD in 1 2 3 4 5 6; do \
+CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset s3dis --S3DIS_PATH $S3DIR_DIR --cvfold $FOLD --epochs -1 --lr_steps '[275,320]' \
+--test_nth_epoch 50 --model_config 'gru_10,f_13' --ptn_nfeat_stn 14 --nworkers 2 --odir "results/s3dis/best/cv${FOLD}" --resume RESUME; \
+done
+```
+
+
+## Semantic3D
+
+### Partition
 
 To compute the partition run
 
@@ -47,9 +75,7 @@ To compute the partition run
 
 It is recommended that you have at least 24GB of RAM to run this code. Otherwise, either use swap memory of increase the ```voxel_width``` parameter to increase pruning.
 
-## Learning
-
-### Semantic3D
+### Training
 
 To train on the whole publicly available data and test on the reduced test set, run
 ```
@@ -74,6 +100,8 @@ CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --epochs 450 --l
 ```
 
 Note that you can use `--SEMA3D_PATH` argument to set path to the pre-processed dataset.
+
+
 
 # Licence
 

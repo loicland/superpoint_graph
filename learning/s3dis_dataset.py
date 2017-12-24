@@ -16,19 +16,6 @@ import torchnet as tnt
 import h5py
 import spg
 
-
-def reader_postprocess(entry):
-    """ Remove class "stairs" by handling it as unlabeled (as in previous work) """
-    node_gt, node_gt_size, edges, edge_feats, fname = entry
-
-    node_gt_size[:,0] += node_gt_size[:,-1]
-    node_gt_size = node_gt_size[:,:-1]
-    node_gt = np.argmax(node_gt_size[:,1:], 1)[:,None]
-    node_gt[node_gt_size[:,1:].sum(1)==0,:] = -100
-
-    return node_gt, node_gt_size, edges, edge_feats, fname
-
-
 def get_datasets(args, test_seed_offset=0):
     """ Gets training and test datasets. """
 
@@ -36,14 +23,14 @@ def get_datasets(args, test_seed_offset=0):
     testlist, trainlist = [], []
     for n in range(1,7):
         if n != args.cvfold:
-            path = '{}/reduced_graphs/Area_{:d}/'.format(args.S3DIS_PATH, n)
+            path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, n)
             for fname in sorted(os.listdir(path)):
                 if fname.endswith(".h5"):
-                    trainlist.append(reader_postprocess(spg.spg_reader(args, path + fname, True)))
-    path = '{}/reduced_graphs/Area_{:d}/'.format(args.S3DIS_PATH, args.cvfold)
+                    trainlist.append(spg.spg_reader(args, path + fname, True))
+    path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, args.cvfold)
     for fname in sorted(os.listdir(path)):
         if fname.endswith(".h5"):
-            testlist.append(reader_postprocess(spg.spg_reader(args, path + fname, True)))
+            testlist.append(spg.spg_reader(args, path + fname, True))
 
     # Normalize edge features
     if args.spg_attribs01:
@@ -71,64 +58,56 @@ def get_info(args):
         'inv_class_map': {0:'ceiling', 1:'floor', 2:'wall', 3:'column', 4:'beam', 5:'window', 6:'door', 7:'table', 8:'chair', 9:'bookcase', 10:'sofa', 11:'board', 12:'clutter'},
     }
 
-###### TODO ADAPT:
 
-from plyfile import PlyData, PlyElement
 
-def preprocess_pointclouds():
-    """ Converts .ply clouds into .h5, splitting them by components and normalizing."""
-    import scipy.io
-    S3DIS_PATH = 'datasets/s3dis_02/'
+def preprocess_pointclouds(S3DIS_PATH):
+    """ Preprocesses data by splitting them by components and normalizing."""
 
     for n in range(1,7):
-    #for n in [6]:
         pathP = '{}/parsed/Area_{:d}/'.format(S3DIS_PATH, n)
-        pathD = '{}/descriptors/Area_{:d}/'.format(S3DIS_PATH, n)
-        pathC = '{}/components/Area_{:d}/'.format(S3DIS_PATH, n)
-        if not os.path.exists(pathP):
-            os.makedirs(pathP)
+        pathD = '{}/features/Area_{:d}/'.format(S3DIS_PATH, n)
+        pathC = '{}/superpoint_graphs/Area_{:d}/'.format(S3DIS_PATH, n)
+        
+        if os.path.exists(pathP):
+            return        
+        
+        os.makedirs(pathP)
         random.seed(n)
 
-        for file in os.listdir(pathD):
+        for file in os.listdir(pathC):
             print(file)
-            if file.endswith(".ply"):
-                plydata = PlyData.read(pathD + file)
-                xyz = np.stack([ plydata['vertex'][n] for n in ['x','y','z'] ], axis=1)
-                try:
-                    rgb = np.stack([ plydata['vertex'][n] for n in ['red', 'green', 'blue'] ], axis=1).astype(np.float)
-                except ValueError:
-                    rgb = np.stack([ plydata['vertex'][n] for n in ['r', 'g', 'b'] ], axis=1).astype(np.float)
-                elpsv = np.stack([ plydata['vertex'][n] for n in ['z', 'linearity', 'planarity', 'scattering', 'verticality'] ], axis=1) # todo: unsure about z=elevation
-
-                print(np.amin(xyz[:,2]),np.amax(xyz[:,2]))
+            if file.endswith(".h5"):
+                f = h5py.File(pathD + file, 'r')
+                xyz = f['xyz'][:]
+                rgb = f['rgb'][:].astype(np.float)
+                elpsv = np.stack([ f['xyz'][:,2][:], f['linearity'][:], f['planarity'][:], f['scattering'][:], f['verticality'][:] ], axis=1)
 
                 # rescale to [-0.5,0.5]; keep xyz
-                elpsv[:,0] = elpsv[:,0] / 4 - 0.5 # (4m rough guess)    -- different from sema3d
+                elpsv[:,0] = elpsv[:,0] / 4 - 0.5 # (4m rough guess)
                 elpsv[:,1:] -= 0.5
                 rgb = rgb/255.0 - 0.5
 
-                ma, mi = np.max(xyz,axis=0,keepdims=True), np.min(xyz,axis=0,keepdims=True)  #-- different from sema3d
+                ma, mi = np.max(xyz,axis=0,keepdims=True), np.min(xyz,axis=0,keepdims=True)
                 xyzn = (xyz - mi) / (ma - mi + 1e-8)   # as in PointNet ("normalized location as to the room (from 0 to 1)")
 
                 P = np.concatenate([xyz, rgb, elpsv, xyzn], axis=1)
 
-                mat = scipy.io.loadmat(pathC + os.path.splitext(file)[0] + '_components.mat')
-                components=mat['components']
+                f = h5py.File(pathC + file, 'r')
+                numc = len(f['components'].keys())
 
-                with h5py.File(pathP + os.path.splitext(file)[0] + '.h5', 'w') as hf:
-                    for c in range(len(components)):
-                        idx = components[c][0].flatten()
-
+                with h5py.File(pathP + file, 'w') as hf:
+                    for c in range(numc):
+                        idx = f['components/{:d}'.format(c)][:].flatten()
                         if idx.size > 10000: # trim extra large segments, just for speed-up of loading time
                             ii = random.sample(range(idx.size), k=10000)
                             idx = idx[ii]
 
                         hf.create_dataset(name='{:d}'.format(c), data=P[idx,...])
 
-                # todo: do https://flothesof.github.io/farthest-neighbors.html right here? Also PointNet recommends farthest point subsampling...
-
-
-
 
 if __name__ == "__main__":
-    preprocess_pointclouds()
+    import argparse
+    parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs')
+    parser.add_argument('--S3DIS_PATH', default='datasets/s3dis')
+    args = parser.parse_args()
+    preprocess_pointclouds(args.S3DIS_PATH)

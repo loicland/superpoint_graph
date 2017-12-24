@@ -125,7 +125,7 @@ def get_objects(raw_path):
     nn = NearestNeighbors(1, algorithm='kd_tree').fit(xyz)
     room_labels = np.zeros((n_ver,), dtype='uint8')
     room_object_indices = np.zeros((n_ver,), dtype='uint32')
-    objects = glob.glob(raw_path + "Annotations/*.txt")
+    objects = glob.glob(os.path.dirname(raw_path) + "/Annotations/*.txt")
     i_object = 0
     for single_object in objects:
         object_name = os.path.splitext(os.path.basename(single_object))[0]
@@ -146,7 +146,7 @@ def write_ply_obj(filename, xyz, rgb, labels, object_indices):
             , ('object_index', 'uint32')]
     vertex_all = np.empty(len(xyz), dtype=prop)
     for i_prop in range(0, 3):
-    	vertex_all[prop[i_prop][0]] = xyz[:, i_prop]
+        vertex_all[prop[i_prop][0]] = xyz[:, i_prop]
     for i_prop in range(0, 3):
         vertex_all[prop[i_prop+3][0]] = rgb[:, i_prop]
     vertex_all[prop[6][0]] = labels

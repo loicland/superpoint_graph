@@ -64,34 +64,31 @@ def spg_reader(args, fname, incl_dir_in_name=False):
     """ Loads a supergraph from H5 file. """
     f = h5py.File(fname,'r')
 
-    if 'node_ground_truth' in f:
-        node_gt_size = f['node_ground_truth'][:].transpose().astype(np.int64) # column 0: no of unlabeled points, column 1+: no of labeled points per class
+    if f['sp_labels'].size > 0:
+        node_gt_size = f['sp_labels'][:].astype(np.int64) # column 0: no of unlabeled points, column 1+: no of labeled points per class
         node_gt = np.argmax(node_gt_size[:,1:], 1)[:,None]
-        node_gt[node_gt_size[:,1:].sum(1)==0,:] = -100      # superpoints without labels are to be ignored in loss computation
+        node_gt[node_gt_size[:,1:].sum(1)==0,:] = -100    # superpoints without labels are to be ignored in loss computation
     else:
-        N = f['node_position'].shape[0]
-        node_gt_size = np.concatenate([f['node_weights'][:].astype(np.int64), np.zeros((N,8), dtype=np.int64)], 1)
+        N = f['sp_point_count'].shape[0]
+        node_gt_size = np.concatenate([f['sp_point_count'][:].astype(np.int64), np.zeros((N,8), dtype=np.int64)], 1)
         node_gt = np.zeros((N,1), dtype=np.int64)
 
     node_att = {}
-    node_att['xyz'] = f['node_position'][:]
-    node_att['nlength'] = np.maximum(0, f['node_dimensions'][:,0][:][:,None])
-    node_att['volume'] = np.maximum(0, f['node_dimensions'][:,1][:][:,None])
-    node_att['surface'] = np.maximum(0, f['node_dimensions'][:,2][:][:,None])
-    if 'node_ground_truth' in f:
-        node_att['size'] = f['node_ground_truth'][:].sum(0)[:,None].astype(np.float)
-    else:
-        node_att['size'] = f['node_weights'][:]
+    node_att['xyz'] = f['sp_centroids'][:]
+    node_att['nlength'] = np.maximum(0, f['sp_length'][:])
+    node_att['volume'] = np.maximum(0, f['sp_volume'][:])
+    node_att['surface'] = np.maximum(0, f['sp_surface'][:])
+    node_att['size'] = f['sp_point_count'][:]
 
-    edges = f['edge_source_target'][:].astype(np.int64)
+    edges = np.concatenate([ f['source'][:], f['target'][:] ], axis=1).astype(np.int64)
 
     edge_att = {}
-    edge_att['delta_avg'] = f['edge_features'][:,:3][:]
-    edge_att['delta_std'] = f['edge_features'][:,3:6][:]
+    edge_att['delta_avg'] = f['se_delta_mean'][:]
+    edge_att['delta_std'] = f['se_delta_std'][:]
 
     edge_feats = spg_edge_features(edges, node_att, edge_att, args)
 
-    name = os.path.basename(fname)[:-len('_graph.h5')]
+    name = os.path.basename(fname)[:-len('.h5')]
     if incl_dir_in_name: name = os.path.basename(os.path.dirname(fname)) + '/' + name
 
     return node_gt, node_gt_size, edges, edge_feats, name

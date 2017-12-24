@@ -4,6 +4,7 @@
 import os.path
 import sys
 import numpy as np
+import argparse
 from timeit import default_timer as timer
 sys.path.append("./cut-pursuit/src")
 sys.path.append("./ply_c")
@@ -11,6 +12,9 @@ import libcp
 import libply_c
 from graphs import *
 from provider import *
+parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs')
+parser.add_argument('--S3DIS_PATH', default='datasets/s3dis')
+args = parser.parse_args()
 #---parameters-----------------------------------------------------------------
 k_nn_geof = 45 #number of neighbors for the geometric features
 k_nn_adj = 10 #adjacency structure for the minimal partition
@@ -20,10 +24,9 @@ d_se_max = 10 #max length of super edges
 n_labels = 13 #number of classes
 #---path to data---------------------------------------------------------------
 #root of the data directory
-root = "/media/landrieuloic/Data/Stanford3D/"
+root = args.S3DIS_PATH+'/'
 #list of subfolders to be processed
 areas = ["Area_1/", "Area_2/", "Area_3/", "Area_4/", "Area_5/", "Area_6/"]
-areas = ["Area_5/"]
 #------------------------------------------------------------------------------
 num_area = len(areas)
 times = [0,0,0]

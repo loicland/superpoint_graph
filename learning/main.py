@@ -63,7 +63,7 @@ def main():
     parser.add_argument('--db_train_name', default='train')
     parser.add_argument('--db_test_name', default='val')
     parser.add_argument('--SEMA3D_PATH', default='datasets/semantic3d')
-    parser.add_argument('--S3DIS_PATH', default='datasets/s3dis_02')
+    parser.add_argument('--S3DIS_PATH', default='datasets/s3dis')
 
     # Model
     parser.add_argument('--model_config', default='gru_10,f_8', help='Defines the model as a sequence of layers, see models.py for definitions of respective layers and acceptable arguments.')
@@ -129,6 +129,7 @@ def main():
         import s3dis_dataset
         dbinfo = s3dis_dataset.get_info(args)
         create_dataset = s3dis_dataset.get_datasets
+        s3dis_dataset.preprocess_pointclouds(args)
     else:
         raise NotImplementedError('Unknown dataset ' + args.dataset)
 
@@ -326,8 +327,10 @@ def resume(args, dbinfo):
     if 'optimizer' in checkpoint: optimizer.load_state_dict(checkpoint['optimizer'])
     for group in optimizer.param_groups: group['initial_lr'] = args.lr
     args.start_epoch = checkpoint['epoch']
-    
-    stats = json.loads(open(os.path.join(os.path.dirname(args.resume), 'trainlog.txt')).read())
+    try:
+        stats = json.loads(open(os.path.join(os.path.dirname(args.resume), 'trainlog.txt')).read())
+    except:
+        stats = []
     return model, optimizer, stats
     
 def create_model(args, dbinfo):

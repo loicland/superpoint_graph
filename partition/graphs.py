@@ -49,6 +49,7 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
 #compute the superpoint graph      ---------
 #with superpoints and superedges features---
     n_com = max(in_component)+1
+    in_component = np.array(in_component)
     has_labels = len(labels) > 0
     #---compute delaunay triangulation---
     tri = Delaunay(xyz)
@@ -157,8 +158,7 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
         graph["source"][i_sedg] = com_source
         graph["target"][i_sedg] = com_target
         #---compute the ratio features---
-        graph["se_delta_centroid"][i_sedg,:] = graph["sp_centroids"][com_source,:]
-        - graph["sp_centroids"][com_target, :]
+        graph["se_delta_centroid"][i_sedg,:] = graph["sp_centroids"][com_source,:] - graph["sp_centroids"][com_target, :]
         graph["se_length_ratio"][i_sedg] = graph["sp_length"][com_source] / (graph["sp_length"][com_target] + 1e-6)
         graph["se_surface_ratio"][i_sedg] = graph["sp_surface"][com_source] / (graph["sp_surface"][com_target] + 1e-6)
         graph["se_volume_ratio"][i_sedg] = graph["sp_volume"][com_source] / (graph["sp_volume"][com_target] + 1e-6)
