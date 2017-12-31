@@ -13,11 +13,11 @@ This is the official PyTorch implementation of our paper *Large-scale Point Clou
 
 ## Requirements
 
-1. Install [PyTorch](https://pytorch.org), [visdom](https://anaconda.org/conda-forge/visdom) with ```conda install -c conda-forge visdom``` and finally [torchnet](https://github.com/pytorch/tnt) with `pip install git+https://github.com/pytorch/tnt.git@master`.
+1. Install [PyTorch](https://pytorch.org) and [torchnet](https://github.com/pytorch/tnt) with `pip install git+https://github.com/pytorch/tnt.git@master`.
 
 2. Install additional Python packages: `pip install future python-igraph tqdm transforms3d pynvrtc cupy h5py sklearn plyfile scipy`.
 
-3. Install Boost (1.63.0 or newer) and Eigen3, in Conda: `conda install -c anaconda boost; conda install -c omnia eigen3`
+3. Install Boost (1.63.0 or newer) and Eigen3, in Conda: `conda install -c anaconda boost; conda install -c omnia eigen3; conda install eigen; conda install -c r libiconv`.
 
 4. Compile the ```libply_c``` and ```libcp``` libraries:
 ```
@@ -26,7 +26,7 @@ cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.so -DPYTHON_INCLUDE_DIR=$CONDA
 make
 cd ..
 cd cut-pursuit
-cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.6m -DBOOST_INCLUDEDIR=$CONDAENV/include  -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
+cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.6m -DBOOST_INCLUDEDIR=$CONDAENV/include -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
 make
 ```
 where `$CONDAENV` is the path to your conda environment. The code was tested on Ubuntu 14.04 with Python 3.6 and PyTorch 0.2.

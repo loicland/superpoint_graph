@@ -98,12 +98,15 @@ class GRUCellEx(nn.GRUCell):
             input = nnf.sigmoid(self._modules['ig'](hidden)) * input
 
         # GRUCell in https://github.com/pytorch/pytorch/blob/master/torch/nn/_functions/rnn.py extended with layer normalization
-        if torch.__version__=='0.2.0' and input.is_cuda: #do not work with 0.3
+        if input.is_cuda:
             gi = nnf.linear(input, self.weight_ih)
             gh = nnf.linear(hidden, self.weight_hh)
             gi, gh = self._normalize(gi, gh)
-            state = torch.nn._functions.thnn.rnnFusedPointwise.GRUFused()
-            return state(gi, gh, hidden) if self.bias_ih is None else state(gi, gh, hidden, self.bias_ih, self.bias_hh)
+            state = torch.nn._functions.thnn.rnnFusedPointwise.GRUFused
+            try: #pytorch >=0.3
+                return state.apply(gi, gh, hidden) if self.bias_ih is None else state.apply(gi, gh, hidden, self.bias_ih, self.bias_hh)
+            except: #pytorch <=0.2
+                return state()(gi, gh, hidden) if self.bias_ih is None else state()(gi, gh, hidden, self.bias_ih, self.bias_hh)
 
         gi = nnf.linear(input, self.weight_ih, self.bias_ih)
         gh = nnf.linear(hidden, self.weight_hh, self.bias_hh)

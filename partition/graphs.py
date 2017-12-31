@@ -82,7 +82,7 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
     #---sort edges by alpha numeric order wrt to the components of their source/target---
     n_edg = len(edges[0])
     edge_comp = in_component[edges]
-    edge_comp_index = n_com * np.min(edge_comp, axis=0) +  np.max(edge_comp, axis=0)
+    edge_comp_index = n_com * edge_comp[0,:] +  edge_comp[1,:]
     order = np.argsort(edge_comp_index)
     edges = edges[:, order]
     edge_comp = edge_comp[:, order]

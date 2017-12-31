@@ -129,7 +129,6 @@ def main():
         import s3dis_dataset
         dbinfo = s3dis_dataset.get_info(args)
         create_dataset = s3dis_dataset.get_datasets
-        s3dis_dataset.preprocess_pointclouds(args)
     else:
         raise NotImplementedError('Unknown dataset ' + args.dataset)
 

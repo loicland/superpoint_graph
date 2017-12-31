@@ -67,11 +67,8 @@ def preprocess_pointclouds(S3DIS_PATH):
         pathP = '{}/parsed/Area_{:d}/'.format(S3DIS_PATH, n)
         pathD = '{}/features/Area_{:d}/'.format(S3DIS_PATH, n)
         pathC = '{}/superpoint_graphs/Area_{:d}/'.format(S3DIS_PATH, n)
-        
-        if os.path.exists(pathP):
-            return        
-        
-        os.makedirs(pathP)
+        if not os.path.exists(pathP):
+            os.makedirs(pathP)
         random.seed(n)
 
         for file in os.listdir(pathC):
