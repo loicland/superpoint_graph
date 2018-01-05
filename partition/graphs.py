@@ -148,7 +148,7 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
     #---compute the superedges features---
     for i_sedg in range(0, n_sedg):
         i_edg_begin = jump_edg[i_sedg]
-        i_edg_end = jump_edg[i_sedg + 1] - 1
+        i_edg_end = jump_edg[i_sedg + 1]
         ver_source = edges[0, range(i_edg_begin, i_edg_end)]
         ver_target = edges[1, range(i_edg_begin, i_edg_end)]
         com_source = edge_comp[0, i_edg_begin]

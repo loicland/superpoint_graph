@@ -13,6 +13,7 @@ import os.path
 import glob
 import sys
 import numpy as np
+import argparse
 from plyfile import PlyData, PlyElement
 from timeit import default_timer as timer
 sys.path.append("./cut-pursuit/src")
@@ -21,6 +22,9 @@ import libcp
 import libply_c
 from graphs import *
 from provider import *
+parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs')
+parser.add_argument('--SEMA3D_PATH', default='datasets/semantic3d')
+args = parser.parse_args()
 ver_batch = 5000000 #batch size when reading the large ply size
 voxel_width = 0.05 #voxel size when subsampling (in m)
 k_nn_geof = 45 #number of neighbors for the geometric features
@@ -30,11 +34,9 @@ reg_strength = 1 #regularization strength for the minimal partition
 d_se_max = 10 #max length of super edges
 n_labels = 8
 #root of the data directory
-root = "/media/landrieuloic/Data/semantic3d/"
+root = args.SEMA3D_PATH+'/'
 #list of subfolders to be processed
-areas = ["reduced_set/", "test_set/", "train_set/"]
-areas = ["training_set/", "reduced_set/"]
-areas = ["training_set/"]
+areas = ['train/', 'test_reduced/', 'test_full/']
 num_area = len(areas)
 times = [0,0,0]
 if not os.path.isdir(root + "clouds"):
@@ -65,13 +67,14 @@ for area in areas:
     i_file = 0
     for file in files:
         file_name = os.path.splitext(os.path.basename(file))[0]
+        file_name_short = '_'.join(file_name.split('_')[:2])
         data_file  = data_folder + file_name + ".txt"
         label_file = data_folder + file_name + ".labels"
         ply_file   = ply_folder  + file_name
-        fea_file   = fea_folder  + file_name + '.h5'
-        spg_file   = spg_folder  + file_name + '.h5' 
+        fea_file   = fea_folder  + file_name_short + '.h5'
+        spg_file   = spg_folder  + file_name_short + '.h5'
         i_file = i_file + 1
-        print(str(i_file) + " / " + str(n_files) + "---> "+file_name)
+        print(str(i_file) + " / " + str(n_files) + "---> "+file_name_short)
         #--- build the geometric feature file h5 file ----------------------
         if os.path.isfile(fea_file):
             print("    reading the existing feature file...")

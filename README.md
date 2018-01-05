@@ -33,7 +33,7 @@ where `$CONDAENV` is the path to your conda environment. The code was tested on 
 
 ## S3DIS
 
-Download [S3DIS Dataset](http://buildingparser.stanford.edu/dataset.html) and extract `Stanford3dDataset_v1.2_Aligned_Version.zip` to `$S3DIR_DIR/data`.
+Download [S3DIS Dataset](http://buildingparser.stanford.edu/dataset.html) and extract `Stanford3dDataset_v1.2_Aligned_Version.zip` to `$S3DIR_DIR/data`, where `$S3DIR_DIR` is set to dataset directory.
 
 ### Partition
 
@@ -67,19 +67,25 @@ done
 
 ## Semantic3D
 
+Download all point clouds and labels from [Semantic3D Dataset](http://www.semantic3d.net/) and place extracted training files to `$SEMA3D_DIR/data/train`, reduced test files into `$SEMA3D_DIR/data/test_reduced`, and full test files into `$SEMA3D_DIR/data/test_full`, where `$SEMA3D_DIR` is set to dataset directory. The label files of the training files must be put in the same directory than the .txt files.
+
 ### Partition
 
 To compute the partition run
 
-```python partition_Semantic3D.py```
+```cd partition; python partition_Semantic3D.py --SEMA3D_PATH $SEMA3D_DIR```
 
 It is recommended that you have at least 24GB of RAM to run this code. Otherwise, either use swap memory of increase the ```voxel_width``` parameter to increase pruning.
 
 ### Training
 
+First, reorganize point clouds into superpoints by:
+
+```python learning/sema3d_dataset.py --SEMA3D_PATH $SEMA3D_DIR```
+
 To train on the whole publicly available data and test on the reduced test set, run
 ```
-CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --db_test_name testred --db_train_name trainval \
+CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $SEMA3D_DIR --db_test_name testred --db_train_name trainval \
 --epochs 500 --lr_steps '[350, 400, 450]' --test_nth_epoch 100 --model_config 'gru_10,f_8' --ptn_nfeat_stn 11 \
 --nworkers 2 --odir "results/sema3d/trainval_best"
 ```
@@ -88,18 +94,16 @@ The trained network can be downloaded [here](http://imagine.enpc.fr/~simonovm/la
 
 To test this network on the full test set, run
 ```
-CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --db_test_name testfull --db_train_name trainval \
+CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $SEMA3D_DIR --db_test_name testfull --db_train_name trainval \
 --epochs -1 --lr_steps '[350, 400, 450]' --test_nth_epoch 100 --model_config 'gru_10,f_8' --ptn_nfeat_stn 11 \
 --nworkers 2 --odir "results/sema3d/trainval_best" --resume RESUME
 ```
 
 We validated our configuration on a custom split of 11 and 4 clouds. The network is trained as such:
 ```
-CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --epochs 450 --lr_steps '[350, 400]' --test_nth_epoch 100 \
+CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $SEMA3D_DIR --epochs 450 --lr_steps '[350, 400]' --test_nth_epoch 100 \
 --model_config 'gru_10,f_8' --ptn_nfeat_stn 11 --nworkers 2 --odir "results/sema3d/best"
 ```
-
-Note that you can use `--SEMA3D_PATH` argument to set path to the pre-processed dataset.
 
 
 

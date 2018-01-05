@@ -23,23 +23,23 @@ def get_datasets(args, test_seed_offset=0):
     valid_names = ['bildstein_station3', 'domfountain_station2', 'sg27_station4', 'untermaederbrunnen_station3']
 
     if args.db_train_name == 'train':
-        trainset = train_names
+        trainset = ['train/' + f for f in train_names]
     elif args.db_train_name == 'trainval':
-        trainset = train_names + valid_names
+        trainset = ['train/' + f for f in train_names + valid_names]
 
     if args.db_test_name == 'val':
-        testset = valid_names
+        testset = ['train/' + f for f in valid_names]
     elif args.db_test_name == 'testred':
-        testset = ['testred/' + os.path.splitext(f)[0] for f in os.listdir(args.SEMA3D_PATH + '/descriptors/testred')]
+        testset = ['test_reduced/' + os.path.splitext(f)[0] for f in os.listdir(args.SEMA3D_PATH + '/superpoint_graphs/test_reduced')]
     elif args.db_test_name == 'testfull':
-        testset = ['testfull/' + os.path.splitext(f)[0] for f in os.listdir(args.SEMA3D_PATH + '/descriptors/testfull')]
+        testset = ['test_full/' + os.path.splitext(f)[0] for f in os.listdir(args.SEMA3D_PATH + '/superpoint_graphs/test_full')]
 
     # Load superpoints graphs
     testlist, trainlist = [], []
     for n in trainset:
-        trainlist.append(spg.spg_reader(args, args.SEMA3D_PATH + '/reduced_graphs/' + n + '_graph.h5'))
+        trainlist.append(spg.spg_reader(args, args.SEMA3D_PATH + '/superpoint_graphs/' + n + '.h5'))
     for n in testset:
-        testlist.append(spg.spg_reader(args, args.SEMA3D_PATH + '/reduced_graphs/' + n + '_graph.h5', args.db_test_name.startswith('test')))
+        testlist.append(spg.spg_reader(args, args.SEMA3D_PATH + '/superpoint_graphs/' + n + '.h5', args.db_test_name.startswith('test')))
 
     # Normalize edge features
     if args.spg_attribs01:
@@ -67,55 +67,49 @@ def get_info(args):
     }
 
 
-###### TODO ADAPT:
 
-from plyfile import PlyData, PlyElement
+def preprocess_pointclouds(SEMA3D_PATH):
+    """ Preprocesses data by splitting them by components and normalizing."""
 
-def preprocess_pointclouds():
-    """ Converts .ply clouds into .h5, splitting them by components and normalizing."""
-    import scipy.io
-    random.seed(0)    # note: I preprocessed train+val and both tests independently!
-    SEMA3D_PATH = 'datasets/semantic3d/'
+    for n in ['train', 'test_reduced', 'test_full']:
+        pathP = '{}/parsed/{}/'.format(SEMA3D_PATH, n)
+        pathD = '{}/features/{}/'.format(SEMA3D_PATH, n)
+        pathC = '{}/superpoint_graphs/{}/'.format(SEMA3D_PATH, n)
+        if not os.path.exists(pathP):
+            os.makedirs(pathP)
+        random.seed(0)
 
-    prefix = 'full/'
-    for file in os.listdir(SEMA3D_PATH+ 'descriptors/' + prefix):
-        print(file)
-        if file.endswith(".ply"):
-            plydata = PlyData.read(SEMA3D_PATH + 'descriptors/' + prefix + file)
-            xyz = np.stack([ plydata['vertex'][n] for n in ['x','y','z'] ], axis=1)
-            try:
-                rgb = np.stack([ plydata['vertex'][n] for n in ['red', 'green', 'blue'] ], axis=1).astype(np.float)
-            except ValueError:
-                rgb = np.stack([ plydata['vertex'][n] for n in ['r', 'g', 'b'] ], axis=1).astype(np.float)
-            elpsv = np.stack([ plydata['vertex'][n] for n in ['z', 'linearity', 'planarity', 'scattering', 'verticality'] ], axis=1) # todo: unsure about z=elevation !
-            #elpsv = np.concatenate([np.zeros((lpsv.shape[0],1)), lpsv], axis=1)   # TODO: missing
+        for file in os.listdir(pathC):
+            print(file)
+            if file.endswith(".h5"):
+                f = h5py.File(pathD + file, 'r')
+                xyz = f['xyz'][:]
+                rgb = f['rgb'][:].astype(np.float)
+                elpsv = np.stack([ f['xyz'][:,2][:], f['linearity'][:], f['planarity'][:], f['scattering'][:], f['verticality'][:] ], axis=1)
 
-            print(np.amin(xyz[:,2]),np.amax(xyz[:,2]))
+                # rescale to [-0.5,0.5]; keep xyz
+                elpsv[:,0] /= 100 # (rough guess)
+                elpsv[:,1:] -= 0.5
+                rgb = rgb/255.0 - 0.5
 
-            # rescale to [-0.5,0.5]; keep xyz
-            elpsv[:,0] /= 100 # (rough guess)
-            elpsv[:,1:] -= 0.5
-            rgb = rgb/255.0 - 0.5
+                P = np.concatenate([xyz, rgb, elpsv], axis=1)
 
-            P = np.concatenate([xyz, rgb, elpsv], axis=1)
+                f = h5py.File(pathC + file, 'r')
+                numc = len(f['components'].keys())
 
-            mat = scipy.io.loadmat(SEMA3D_PATH + 'components/' + prefix + os.path.splitext(file)[0] + '_components.mat')
-            components=mat['components']
+                with h5py.File(pathP + file, 'w') as hf:
+                    for c in range(numc):
+                        idx = f['components/{:d}'.format(c)][:].flatten()
+                        if idx.size > 10000: # trim extra large segments, just for speed-up of loading time
+                            ii = random.sample(range(idx.size), k=10000)
+                            idx = idx[ii]
 
-            with h5py.File(SEMA3D_PATH + 'parsed/' + prefix + os.path.splitext(file)[0]+ '.h5', 'w') as hf:
-                for c in range(len(components)):
-                    idx = components[c][0].flatten()
-
-                    if idx.size > 10000: # trim extra large segments, just for speed-up of loading time
-                        ii = random.sample(range(idx.size), k=10000)
-                        idx = idx[ii]
-
-                    hf.create_dataset(name='{:d}'.format(c), data=P[idx,...])
-
-            # todo: do https://flothesof.github.io/farthest-neighbors.html right here? Also PointNet recommends farthest point subsampling...
-
-
+                        hf.create_dataset(name='{:d}'.format(c), data=P[idx,...])
 
 
 if __name__ == "__main__":
-    preprocess_pointclouds()
+    import argparse
+    parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs')
+    parser.add_argument('--SEMA3D_PATH', default='datasets/semantic3d')
+    args = parser.parse_args()
+    preprocess_pointclouds(args.SEMA3D_PATH)
