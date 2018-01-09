@@ -1,6 +1,9 @@
-#------------------------------------------------------------------------------
-#--- Loic landrieu Dec 2017 ---------------------------------------------------
-#------------------------------------------------------------------------------
+"""
+    Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs
+    http://arxiv.org/abs/1711.09869
+    2017 Loic Landrieu, Martin Simonovsky
+
+"""
 import os.path
 import sys
 import numpy as np
@@ -14,16 +17,17 @@ from graphs import *
 from provider import *
 parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs')
 parser.add_argument('--S3DIS_PATH', default='datasets/s3dis')
+
+#parameters
+parser.add_argument('--k_nn_geof', default=45, type=int, help='number of neighbors for the geometric features')
+parser.add_argument('--k_nn_adj', default=10, type=int, help='adjacency structure for the minimal partition')
+parser.add_argument('--lambda_edge_weight', default=1., type=float, help='parameter determine the edge weight for minimal part.')
+parser.add_argument('--reg_strength', default=.16, type=float, help='regularization strength for the minimal partition')
+parser.add_argument('--d_se_max', default=10, type=float, help='max length of super edges')
+parser.add_argument('--n_labels', default=13, type=int, help='number of classes')
 args = parser.parse_args()
-#---parameters-----------------------------------------------------------------
-k_nn_geof = 45 #number of neighbors for the geometric features
-k_nn_adj = 10 #adjacency structure for the minimal partition
-lambda_edge_weight = 1. #parameter determine the edge weight for minimal part.
-reg_strength = .2 #regularization strength for the minimal partition
-d_se_max = 10 #max length of super edges
-n_labels = 13 #number of classes
-#---path to data---------------------------------------------------------------
-#root of the data directory
+
+#path to data
 root = args.S3DIS_PATH+'/'
 #list of subfolders to be processed
 areas = ["Area_1/", "Area_2/", "Area_3/", "Area_4/", "Area_5/", "Area_6/"]
@@ -75,9 +79,9 @@ for area in areas:
             xyz, rgb, labels, room_object_indices = get_objects(data_file)
             start = timer()
             #---compute 10 nn graph-------
-            graph_nn, target_fea = compute_graph_nn_2(xyz, k_nn_adj, k_nn_geof)
+            graph_nn, target_fea = compute_graph_nn_2(xyz, args.k_nn_adj, args.k_nn_geof)
             #---compute geometric features-------
-            geof = libply_c.compute_geof(xyz, target_fea, k_nn_geof).astype('float32')
+            geof = libply_c.compute_geof(xyz, target_fea, args.k_nn_geof).astype('float32')
             end = timer()
             times[0] = times[0] + end - start
             del target_fea
@@ -93,19 +97,20 @@ for area in areas:
             start = timer()
             features = np.hstack((geof, rgb/255.)).astype('float32')
             features[:,3] = 2. * features[:,3] #increase importance of verticality (heuristic)
-            graph_nn["edge_weight"] = np.array(1. / ( lambda_edge_weight + graph_nn["distances"] / np.mean(graph_nn["distances"])), dtype = 'float32')
+            graph_nn["edge_weight"] = np.array(1. / ( args.lambda_edge_weight + graph_nn["distances"] / np.mean(graph_nn["distances"])), dtype = 'float32')
             print("        minimal partition...")
             components, in_component = libcp.cutpursuit(features, graph_nn["source"], graph_nn["target"]
-                                         , graph_nn["edge_weight"], reg_strength)
+                                         , graph_nn["edge_weight"], args.reg_strength)
             components = np.array(components, dtype = 'object')
             end = timer()
             times[1] = times[1] + end - start
             print("        computation of the SPG...")
             start = timer()
-            graph_sp = compute_sp_graph(xyz, d_se_max, in_component, components, labels, n_labels)
+            graph_sp = compute_sp_graph(xyz, args.d_se_max, in_component, components, labels, args.n_labels)
             end = timer()
             times[2] = times[2] + end - start
             write_spg(spg_file, graph_sp, components, in_component)
+        
         print("Timer : %5.1f / %5.1f / %5.1f " % (times[0], times[1], times[2]))
         #write various point cloud, uncomment for vizualization
         #write_ply_obj(ply_file + "_labels.ply", xyz, rgb, labels, room_object_indices)

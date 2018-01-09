@@ -1,7 +1,11 @@
-#------------------------------------------------------------------------------
-#------ PLY functions for writing and converting ------------------------------
-#----------- Loic Landrieu Dec. 2017 ------------------------------------------
-#------------------------------------------------------------------------------
+"""
+    Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs
+    http://arxiv.org/abs/1711.09869
+    2017 Loic Landrieu, Martin Simonovsky
+
+functions for writing and reading features and superpoint graph
+
+"""
 import os
 import sys
 import random
@@ -15,7 +19,7 @@ sys.path.append("./ply_c")
 import libply_c
 #------------------------------------------------------------------------------
 def partition2ply(filename, xyz, components):
-#write a ply with random colors for each components ---------------------
+    """write a ply with random colors for each components"""
     random_color = lambda: random.randint(0, 255)
     color = np.zeros(xyz.shape)
     for i_com in range(0, len(components)):
@@ -32,7 +36,7 @@ def partition2ply(filename, xyz, components):
     ply.write(filename)
 #------------------------------------------------------------------------------
 def geof2ply(filename, xyz, geof):
-#write a ply with colors corresponding to geometric features
+    """write a ply with colors corresponding to geometric features"""
     color = np.array(255 * geof[:, [0, 1, 3]], dtype='uint8')
     prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
     vertex_all = np.empty(len(xyz), dtype=prop)
@@ -44,7 +48,7 @@ def geof2ply(filename, xyz, geof):
     ply.write(filename)
 #------------------------------------------------------------------------------
 def prediction2ply(filename, xyz, prediction, n_label):
-#write a ply with colors for each class------------ ---------------------
+    """write a ply with colors for each class"""
     color = np.zeros(xyz.shape)
     for i_label in range(0, n_label + 1):
         color[np.where(prediction == i_label), :] = get_color_from_label(i_label, n_label)
@@ -58,7 +62,7 @@ def prediction2ply(filename, xyz, prediction, n_label):
     ply.write(filename)
 #------------------------------------------------------------------------------
 def object_name_to_label(object_class):
-#convert from object name in S3DIS to an int
+    """convert from object name in S3DIS to an int"""
     object_label = {
         'ceiling': 1,
         'floor': 2,
@@ -78,7 +82,7 @@ def object_name_to_label(object_class):
     return object_label
 #------------------------------------------------------------------------------
 def get_color_from_label(object_label, n_label):
-#associate the color corresponding to the class
+    """associate the color corresponding to the class"""
     if n_label == 13: #S3DIS
         object_label = {
             0: [0   ,   0,   0], #unlabelled .->. black
@@ -116,7 +120,7 @@ def get_color_from_label(object_label, n_label):
 #------------------------------------------------------------------------------
 def get_objects(raw_path):
 #S3DIS specific
-#extract data from a room folder
+    """extract data from a room folder"""
     room_ver = genfromtxt(raw_path, delimiter=' ')
     xyz = np.array(room_ver[:, 0:3], dtype='float32')
     rgb = np.array(room_ver[:, 3:6], dtype='uint8')
@@ -140,7 +144,7 @@ def get_objects(raw_path):
     return xyz, rgb, room_labels, room_object_indices
 #------------------------------------------------------------------------------
 def write_ply_obj(filename, xyz, rgb, labels, object_indices):
-#write into a ply file. include the label and the object number
+    """write into a ply file. include the label and the object number"""
     prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1')
             , ('green', 'u1'), ('blue', 'u1'), ('label', 'u1')
             , ('object_index', 'uint32')]
@@ -155,7 +159,7 @@ def write_ply_obj(filename, xyz, rgb, labels, object_indices):
     ply.write(filename)
 #------------------------------------------------------------------------------
 def write_ply_labels(filename, xyz, rgb, labels):
-#write into a ply file. include the label -------------------------------
+    """write into a ply file. include the label"""
     prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1')
             , ('blue', 'u1'), ('label', 'u1')]
     vertex_all = np.empty(len(xyz), dtype=prop)
@@ -168,7 +172,7 @@ def write_ply_labels(filename, xyz, rgb, labels):
     ply.write(filename)
 #------------------------------------------------------------------------------
 def write_ply(filename, xyz, rgb):
-#write into a ply file. ----------------- -------------------------------
+    """write into a ply file"""
     prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
     vertex_all = np.empty(len(xyz), dtype=prop)
     for i_prop in range(0, 3):
@@ -179,7 +183,7 @@ def write_ply(filename, xyz, rgb):
     ply.write(filename)
 #------------------------------------------------------------------------------
 def read_ply(filename):
-#convert from a ply file. include the label and the object number -------
+    """convert from a ply file. include the label and the object number"""
     #---read the ply file--------
     plydata = PlyData.read(filename)
     xyz = np.stack([plydata['vertex'][n] for n in['x', 'y', 'z']], axis=1)
@@ -205,7 +209,7 @@ def read_ply(filename):
             return xyz, rgb
 #------------------------------------------------------------------------------
 def write_features(file_name, geof, xyz, rgb, graph_nn, labels):
-# write the geometric features, labels and clouds in a h5 file ------------------------------
+    """write the geometric features, labels and clouds in a h5 file"""
     data_file = h5py.File(file_name, 'w')
     data_file.create_dataset('linearity', data=geof[:, 0], dtype='float32')
     data_file.create_dataset('planarity', data=geof[:, 1], dtype='float32')
@@ -220,7 +224,7 @@ def write_features(file_name, geof, xyz, rgb, graph_nn, labels):
     data_file.close()
 #------------------------------------------------------------------------------
 def read_features(file_name):
-#read the geometric features, clouds and labels from a h5 file -----------------------------
+    """read the geometric features, clouds and labels from a h5 file"""
     data_file = h5py.File(file_name, 'r')
     #fist get the number of vertices
     n_ver = len(data_file["linearity"])
@@ -257,7 +261,7 @@ def read_features(file_name):
     return geof, xyz, rgb, graph_nn, labels
 #------------------------------------------------------------------------------
 def write_spg(file_name, graph_sp, components, in_component):
-#save the partition and spg information
+    """save the partition and spg information"""
     data_file = h5py.File(file_name, 'w')
     grp = data_file.create_group('components')
     n_com = len(components)
@@ -299,7 +303,7 @@ def write_spg(file_name, graph_sp, components, in_component):
                              , data=graph_sp["se_point_count_ratio"], dtype='float32')
 #-----------------------------------------------------------------------------
 def read_spg(file_name):
-#read the partition and spg information ----------------------------
+    """read the partition and spg information"""
     data_file = h5py.File(file_name, 'r')
     graph = dict([("is_nn", False)])
     graph["source"] = np.array(data_file["source"], dtype='uint32')
@@ -326,8 +330,15 @@ def read_spg(file_name):
         components[i_com] = np.array(grp[str(i_com)], dtype='uint32').tolist()
     return graph, components, in_component
 #------------------------------------------------------------------------------
+def reduced_labels2full(labels_red, components, n_ver):
+    """distribute the labels of superpoints to their repsective points"""
+    labels_full = np.zeros((n_ver, ), dtype='uint8')
+    for i_com in range(0, len(components)):
+        labels_full[components[i_com]] = labels_red[i_com]
+    return labels_full
+#------------------------------------------------------------------------------
 def prune(data_file, ver_batch, voxel_width):
-#prune the cloud with a regular voxel grid
+    """prune the cloud with a regular voxel grid"""
     i_rows = 0
     xyz = np.zeros((0, 3), dtype='float32')
     rgb = np.zeros((0, 3), dtype='uint8')
@@ -353,7 +364,7 @@ def prune(data_file, ver_batch, voxel_width):
     return xyz, rgb
 #------------------------------------------------------------------------------
 def prune_labels(data_file, file_label_path, ver_batch, voxel_width, n_class):
-#prune the cloud with a regular voxel grid - with labels-----------------
+    """prune the cloud with a regular voxel grid - with labels"""
     i_rows = 0
     xyz = np.zeros((0, 3), dtype='float32')
     rgb = np.zeros((0, 3), dtype='uint8')
@@ -383,8 +394,8 @@ def prune_labels(data_file, file_label_path, ver_batch, voxel_width, n_class):
         i_rows = i_rows + ver_batch
     return xyz, rgb, labels
 #------------------------------------------------------------------------------
-def interpolate_labels(data_file, output_name, xyz, labels, ver_batch):
-#interpolate the labels of the pruned cloud to the full cloud
+def interpolate_labels(data_file, xyz, labels, ver_batch):
+    """interpolate the labels of the pruned cloud to the full cloud"""
     i_rows = 0
     labels_f = np.zeros((0, ), dtype='uint8')
     #---the clouds can potentially be too big to parse directly---
@@ -398,11 +409,12 @@ def interpolate_labels(data_file, output_name, xyz, labels, ver_batch):
         except StopIteration:
             #end of file
             break
+        print("*")
         xyz_full = np.array(vertices[:, 0:3], dtype='float32')
         del vertices
         distances, neighbor = nn.kneighbors(xyz_full)
         del distances
-        labels_f = np.hstack((labels_f, labels(neighbor)))
+        labels_f = np.hstack((labels_f, labels[neighbor].flatten()))
         i_rows = i_rows + ver_batch
     #np.savetxt(output_name,labels_f , fmt='%i')
     return labels_f

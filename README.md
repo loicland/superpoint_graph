@@ -105,7 +105,9 @@ CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $S
 --model_config 'gru_10,f_8' --ptn_nfeat_stn 11 --nworkers 2 --odir "results/sema3d/best"
 ```
 
+To upsample the prediction to the unpruned data and write the .labels files for the reduced test set, run:
 
+```python partition/write_Semantic3D.py --SEMA3D_PATH $SEMA3D_DIR --odir "results/sema3d/best --db_test_name testred```
 
 # Licence
 

@@ -1,42 +1,37 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Dec 19 14:57:18 2017
-
-@author: landrieuloic
+    Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs
+    http://arxiv.org/abs/1711.09869
+    2017 Loic Landrieu, Martin Simonovsky
 """
-
-#------------------------------------------------------------------------------
-#--- Loic landrieu Dec 2017 ---------------------------------------------------
-#------------------------------------------------------------------------------
 import os.path
 import glob
 import sys
 import numpy as np
 import argparse
-from plyfile import PlyData, PlyElement
-from timeit import default_timer as timer
-sys.path.append("./cut-pursuit/src")
-sys.path.append("./ply_c")
-import libcp
-import libply_c
+import h5py
 from graphs import *
 from provider import *
 parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs')
-parser.add_argument('--SEMA3D_PATH', default='datasets/semantic3d')
+parser.add_argument('--SEMA3D_PATH', default='datasets/semantic3D')
+
+#parameters
+parser.add_argument('--ver_batch', default=5000000, type=int, help='Batch size for reading large files')
+parser.add_argument('--voxel_width', default=0.05, type=float, help='voxel size when subsampling (in m)')
+parser.add_argument('--k_nn_geof', default=45, type=int, help='number of neighbors for the geometric features')
+parser.add_argument('--k_nn_adj', default=10, type=int, help='adjacency structure for the minimal partition')
+parser.add_argument('--lambda_edge_weight', default=1., type=float, help='parameter determine the edge weight for minimal part.')
+parser.add_argument('--reg_strength', default=.8, type=float, help='regularization strength for the minimal partition')
+parser.add_argument('--d_se_max', default=10, type=float, help='max length of super edges')
+parser.add_argument('--n_labels', default=8, type=int, help='number of classes')
 args = parser.parse_args()
-ver_batch = 5000000 #batch size when reading the large ply size
-voxel_width = 0.05 #voxel size when subsampling (in m)
-k_nn_geof = 45 #number of neighbors for the geometric features
-k_nn_adj = 10 #adjacency structure for the minimal partition
-lambda_edge_weight = 1. #parameter determine the edge weight for minimal part.
-reg_strength = 1 #regularization strength for the minimal partition
-d_se_max = 10 #max length of super edges
-n_labels = 8
-#root of the data directory
+
+#path to data
 root = args.SEMA3D_PATH+'/'
 #list of subfolders to be processed
-areas = ['train/', 'test_reduced/', 'test_full/']
+areas = ["test_reduced/", "test_full/", "train/"]
+#------------------------------------------------------------------------------
 num_area = len(areas)
 times = [0,0,0]
 if not os.path.isdir(root + "clouds"):
@@ -70,9 +65,9 @@ for area in areas:
         file_name_short = '_'.join(file_name.split('_')[:2])
         data_file  = data_folder + file_name + ".txt"
         label_file = data_folder + file_name + ".labels"
-        ply_file   = ply_folder  + file_name
+        ply_file   = ply_folder  + file_name_short
         fea_file   = fea_folder  + file_name_short + '.h5'
-        spg_file   = spg_folder  + file_name_short + '.h5'
+        spg_file   = spg_folder  + file_name_short + '.h5' 
         i_file = i_file + 1
         print(str(i_file) + " / " + str(n_files) + "---> "+file_name_short)
         #--- build the geometric feature file h5 file ----------------------
@@ -86,14 +81,14 @@ for area in areas:
             has_labels = (os.path.isfile(label_file))
             #---retrieving and subsampling the point clouds---
             if (has_labels):
-                 xyz, rgb, labels = prune_labels(data_file, label_file, ver_batch, voxel_width, n_labels)
+                 xyz, rgb, labels = prune_labels(data_file, label_file, args.ver_batch, args.voxel_width, args.n_labels)
             else:
-                 xyz, rgb = prune(data_file, ver_batch, voxel_width)
+                 xyz, rgb = prune(data_file, args.ver_batch, args.voxel_width)
                  labels = []
             #---computing the nn graphs---
-            graph_nn, target_fea = compute_graph_nn_2(xyz, k_nn_adj, k_nn_geof)
+            graph_nn, target_fea = compute_graph_nn_2(xyz, args.k_nn_adj, args.k_nn_geof)
             #---compute geometric features-------
-            geof = libply_c.compute_geof(xyz, target_fea, k_nn_geof).astype('float32')
+            geof = libply_c.compute_geof(xyz, target_fea, args.k_nn_geof).astype('float32')
             end = timer()
             times[0] = times[0] + end - start
             del target_fea
@@ -107,18 +102,17 @@ for area in areas:
             print("    computing the superpoint graph...")
             #--- build the spg h5 file --
             start = timer()
-            features = np.hstack((geof, rgb / 255.)).astype('float32')
-            features[:,3] = 2. * features[:, 3] #increase importance of verticality (heuristic)
-            graph_nn["edge_weight"] = np.array(1. / ( lambda_edge_weight + graph_nn["distances"] / np.mean(graph_nn["distances"])), dtype = 'float32')
+            geof[:,3] = 2. * geof[:, 3] #increase importance of verticality (heuristic)
+            graph_nn["edge_weight"] = np.array(1. / ( args.lambda_edge_weight + graph_nn["distances"] / np.mean(graph_nn["distances"])), dtype = 'float32')
             print("        minimal partition...")
-            components, in_component = libcp.cutpursuit(features, graph_nn["source"], graph_nn["target"]
-                                         , graph_nn["edge_weight"], reg_strength)
+            components, in_component = libcp.cutpursuit(geof, graph_nn["source"], graph_nn["target"]
+                                         , graph_nn["edge_weight"], args.reg_strength)
             components = np.array(components, dtype = 'object')
             end = timer()
             times[1] = times[1] + end - start
             print("        computation of the SPG...")
             start = timer()
-            graph_sp = compute_sp_graph(xyz, d_se_max, in_component, components, labels, n_labels)
+            graph_sp = compute_sp_graph(xyz, args.d_se_max, in_component, components, labels, args.n_labels)
             end = timer()
             times[2] = times[2] + end - start
             write_spg(spg_file, graph_sp, components, in_component)
