@@ -13,6 +13,11 @@ import argparse
 import h5py
 from graphs import *
 from provider import *
+from timeit import default_timer as timer
+sys.path.append("./cut-pursuit/src")
+sys.path.append("./ply_c")
+import libcp
+import libply_c
 parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs')
 parser.add_argument('--SEMA3D_PATH', default='datasets/semantic3D')
 
