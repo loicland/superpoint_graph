@@ -108,7 +108,3 @@ CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $S
 To upsample the prediction to the unpruned data and write the .labels files for the reduced test set, run:
 
 ```python partition/write_Semantic3D.py --SEMA3D_PATH $SEMA3D_DIR --odir "results/sema3d/best --db_test_name testred```
-
-# Licence
-
-SPGraph is under a dual GPL3.0 / commercial license. If you want to use SPGraph for commercial, non-GPL use, contact us about commercial licensing, which will be determined on a case-by-case basis.
