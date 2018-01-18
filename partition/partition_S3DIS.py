@@ -46,7 +46,7 @@ for area in areas:
     data_folder = root + "data/"              + area
     ply_folder  = root + "clouds/"            + area
     fea_folder  = root + "features/"          + area
-    spg_folder  = root + "/superpoint_graphs/"+ area
+    spg_folder  = root + "superpoint_graphs/"+ area
     if not os.path.isdir(data_folder):
         raise ValueError("%s do not exists" % data_folder)
     if not os.path.isdir(ply_folder):
