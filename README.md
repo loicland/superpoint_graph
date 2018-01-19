@@ -23,11 +23,11 @@ This is the official PyTorch implementation of our paper *Large-scale Point Clou
 4. Compile the ```libply_c``` and ```libcp``` libraries:
 ```
 cd partition/ply_c
-cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.6m -DBOOST_INCLUDEDIR=$CONDAENV/include -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
+cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.6m.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.6m -DBOOST_INCLUDEDIR=$CONDAENV/include -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
 make
 cd ..
 cd cut-pursuit
-cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.6m -DBOOST_INCLUDEDIR=$CONDAENV/include -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
+cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.6m.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.6m -DBOOST_INCLUDEDIR=$CONDAENV/include -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
 make
 ```
 where `$CONDAENV` is the path to your conda environment. The code was tested on Ubuntu 14.04 with Python 3.6 and PyTorch 0.2.
@@ -64,7 +64,10 @@ CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset s3dis --S3DIS_PATH $S3D
 --test_nth_epoch 50 --model_config 'gru_10,f_13' --ptn_nfeat_stn 14 --nworkers 2 --odir "results/s3dis/best/cv${FOLD}" --resume RESUME; \
 done
 ```
-
+To visualize the results and intermediary steps, use the visualize function in partition. For example:
+```
+python ./partition/visualize.py --dataset s3dis --ROOT_PATH $S3DIR_DIR --res_file 'models/cv1/predictions_val' --file_path 'Area_1/conferenceRoom_1' --output_type igfpr
+```
 
 ## Semantic3D
 
@@ -108,4 +111,9 @@ CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $S
 
 To upsample the prediction to the unpruned data and write the .labels files for the reduced test set, run:
 
-```python partition/write_Semantic3D.py --SEMA3D_PATH $SEMA3D_DIR --odir "results/sema3d/best --db_test_name testred```
+```python partition/write_Semantic3D.py --SEMA3D_PATH $SEMA3D_DIR --odir "results/sema3d/best" --db_test_name testred```
+
+To visualize the results and intermediary steps (on the subsampled graph), use the visualize function in partition. For example:
+```
+python ./partition/visualize.py --dataset sema3d --ROOT_PATH $SEMA3D_DIR --res_file 'model/semantic3d/predictions_testred_best' --file_path 'test_reduced/MarketplaceFeldkirch_Station4' --output_type ifpr
+```

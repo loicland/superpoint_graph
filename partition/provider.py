@@ -15,8 +15,7 @@ import numpy as np
 from numpy import genfromtxt
 import h5py
 from sklearn.neighbors import NearestNeighbors
-sys.path.append("./ply_c")
-import libply_c
+import ply_c.libply_c
 #------------------------------------------------------------------------------
 def partition2ply(filename, xyz, components):
     """write a ply with random colors for each components"""
