@@ -8,7 +8,7 @@ from scipy.spatial import Delaunay
 from numpy import linalg as LA
 #------------------------------------------------------------------------------
 def compute_graph_nn(xyz, k_nn):
-#compute the knn graph
+    """compute the knn graph"""
     num_ver = xyz.shape[0]
     graph = dict([("is_nn", True)])
     nn = NearestNeighbors(n_neighbors=k_nn+1, algorithm='kd_tree').fit(xyz)
@@ -23,9 +23,9 @@ def compute_graph_nn(xyz, k_nn):
     return graph
 #------------------------------------------------------------------------------
 def compute_graph_nn_2(xyz, k_nn1, k_nn2):
-#compute simulteneoulsy 2 knn structures
-#only saves target for knn2 --------
-#assumption : knn1 <= knn2   -------
+    """compute simulteneoulsy 2 knn structures
+    only saves target for knn2
+    assumption : knn1 <= knn2"""
     assert k_nn1 <= k_nn2, "knn1 must be smaller than knn2"
     num_ver = xyz.shape[0]
     #compute nearest neighbors
@@ -46,11 +46,12 @@ def compute_graph_nn_2(xyz, k_nn1, k_nn2):
     return graph, target2
 #------------------------------------------------------------------------------
 def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
-#compute the superpoint graph      ---------
-#with superpoints and superedges features---
+    """compute the superpoint graph 
+    with superpoints and superedges features""""
     n_com = max(in_component)+1
     in_component = np.array(in_component)
     has_labels = len(labels) > 0
+    label_hist = has_labels and labels.shape[1] > 1
     #---compute delaunay triangulation---
     tri = Delaunay(xyz)
     #interface select the edges between different components
@@ -114,9 +115,11 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
     #---compute the superpoint features---
     for i_com in range(0, n_com):
         comp = components[i_com]
-        if has_labels:
+        if has_labels and not label_hist:
             graph["sp_labels"][i_com, :] = np.histogram(labels[comp]
                 , bins=[float(i)-0.5 for i in range(0, n_labels + 2)])[0]
+        if has_labels and label_hist:
+            graph["sp_labels"][i_com, :] = sum(labels[comp,:])
         graph["sp_point_count"][i_com] = len(comp)
         xyz_sp = np.unique(xyz[comp, :], axis=0)
         if len(xyz_sp) == 1:

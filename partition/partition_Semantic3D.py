@@ -16,6 +16,8 @@ from provider import *
 from timeit import default_timer as timer
 sys.path.append("./cut-pursuit/src")
 sys.path.append("./ply_c")
+sys.path.append("./partition/cut-pursuit/src")
+sys.path.append("./partition/ply_c")
 import libcp
 import libply_c
 parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs')
@@ -122,8 +124,3 @@ for area in areas:
             times[2] = times[2] + end - start
             write_spg(spg_file, graph_sp, components, in_component)
         print("Timer : %5.1f / %5.1f / %5.1f " % (times[0], times[1], times[2]))
-         #write various point cloud, uncomment for vizualization
-        #write_ply_obj(ply_file + "_labels.ply", xyz, rgb, labels, room_object_indices)
-        #prediction2ply(ply_file + "_ground_truth.ply", xyz, labels)
-        #geof2ply(ply_file + "_geof.ply", xyz, geof)
-        #partition2ply(ply_file + "_partition.ply", xyz, components)

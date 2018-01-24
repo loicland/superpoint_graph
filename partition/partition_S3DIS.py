@@ -11,6 +11,8 @@ import argparse
 from timeit import default_timer as timer
 sys.path.append("./cut-pursuit/src")
 sys.path.append("./ply_c")
+sys.path.append("./partition/cut-pursuit/src")
+sys.path.append("./partition/ply_c")
 import libcp
 import libply_c
 from graphs import *
@@ -25,12 +27,14 @@ parser.add_argument('--lambda_edge_weight', default=1., type=float, help='parame
 parser.add_argument('--reg_strength', default=.16, type=float, help='regularization strength for the minimal partition')
 parser.add_argument('--d_se_max', default=10, type=float, help='max length of super edges')
 parser.add_argument('--n_labels', default=13, type=int, help='number of classes')
+parser.add_argument('--voxel_width', default=0.0, type=float, help='voxel size when subsampling (in m)')
 args = parser.parse_args()
 
 #path to data
 root = args.S3DIS_PATH+'/'
 #list of subfolders to be processed
 areas = ["Area_1/", "Area_2/", "Area_3/", "Area_4/", "Area_5/", "Area_6/"]
+pruning = args.voxel_width > 0
 #------------------------------------------------------------------------------
 num_area = len(areas)
 times = [0,0,0]
@@ -77,6 +81,8 @@ for area in areas:
             print("    creating the feature file...")
             #--- read the data files and compute the labels---
             xyz, rgb, labels, room_object_indices = get_objects(data_file)
+            if pruning:
+                xyz, rgb, labels = libply_c.prune(xyz, args.voxel_width, rgb, labels, args.n_labels)
             start = timer()
             #---compute 10 nn graph-------
             graph_nn, target_fea = compute_graph_nn_2(xyz, args.k_nn_adj, args.k_nn_geof)
@@ -112,8 +118,3 @@ for area in areas:
             write_spg(spg_file, graph_sp, components, in_component)
         
         print("Timer : %5.1f / %5.1f / %5.1f " % (times[0], times[1], times[2]))
-        #write various point cloud, uncomment for vizualization
-        #write_ply_obj(ply_file + "_labels.ply", xyz, rgb, labels, room_object_indices)
-        #prediction2ply(ply_file + "_ground_truth.ply", xyz, labels)
-        #geof2ply(ply_file + "_geof.ply", xyz, geof)
-        #partition2ply(ply_file + "_partition.ply", xyz, components)

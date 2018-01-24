@@ -40,7 +40,9 @@ Download [S3DIS Dataset](http://buildingparser.stanford.edu/dataset.html) and ex
 
 To compute the partition run
 
-```cd partition; python partition_S3DIS.py --S3DIS_PATH $S3DIR_DIR```
+```python partition/partition_S3DIS.py --S3DIS_PATH $S3DIR_DIR```
+
+This step can take a long time and take up a lot of RAM. Prune with ```--voxel_width``` between 0.02 and 0.05 to decrease the computational load (disclaimer: the accuracy might decrease, and the trained model won't work).
 
 ### Training
 
@@ -77,9 +79,9 @@ Download all point clouds and labels from [Semantic3D Dataset](http://www.semant
 
 To compute the partition run
 
-```cd partition; python partition_Semantic3D.py --SEMA3D_PATH $SEMA3D_DIR```
+```python partition/partition_Semantic3D.py --SEMA3D_PATH $SEMA3D_DIR```
 
-It is recommended that you have at least 24GB of RAM to run this code. Otherwise, either use swap memory of increase the ```voxel_width``` parameter to increase pruning.
+It is recommended that you have at least 24GB of RAM to run this code. Otherwise, increase the ```voxel_width``` parameter to increase pruning.
 
 ### Training
 

@@ -16,6 +16,7 @@ from numpy import genfromtxt
 import h5py
 from sklearn.neighbors import NearestNeighbors
 sys.path.append("./ply_c")
+sys.path.append("./partition/ply_c")
 import libply_c
 #------------------------------------------------------------------------------
 def partition2ply(filename, xyz, components):
@@ -49,6 +50,8 @@ def geof2ply(filename, xyz, geof):
 #------------------------------------------------------------------------------
 def prediction2ply(filename, xyz, prediction, n_label):
     """write a ply with colors for each class"""
+    if prediction.shape[1] > 1:
+        prediction = np.argmax(prediction, axis = 1)
     color = np.zeros(xyz.shape)
     for i_label in range(0, n_label + 1):
         color[np.where(prediction == i_label), :] = get_color_from_label(i_label, n_label)
@@ -220,7 +223,10 @@ def write_features(file_name, geof, xyz, rgb, graph_nn, labels):
     data_file.create_dataset('distances', data=graph_nn["distances"], dtype='float32')
     data_file.create_dataset('xyz', data=xyz, dtype='float32')
     data_file.create_dataset('rgb', data=rgb, dtype='uint8')
-    data_file.create_dataset('labels', data=labels, dtype='uint8')
+    if len(labels) > 0 and labels.shape[1]>1:
+        data_file.create_dataset('labels', data=labels, dtype='uint32')
+    else:
+        data_file.create_dataset('labels', data=labels, dtype='uint8')
     data_file.close()
 #------------------------------------------------------------------------------
 def read_features(file_name):
@@ -232,8 +238,8 @@ def read_features(file_name):
     has_labels = len(data_file["labels"])
     #the labels can be empty in the case of a test set
     if has_labels:
-        labels = rgb = np.zeros((n_ver, ), dtype='uint8')
-        labels[:] = data_file["labels"]
+        #labels = rgb = np.zeros((n_ver, ), dtype='uint8')
+        labels = np.array(data_file["labels"])
     else:
         labels = []
     #---create the arrays---
@@ -368,7 +374,7 @@ def prune_labels(data_file, file_label_path, ver_batch, voxel_width, n_class):
     i_rows = 0
     xyz = np.zeros((0, 3), dtype='float32')
     rgb = np.zeros((0, 3), dtype='uint8')
-    labels = np.zeros((0, ), dtype='uint8')
+    labels = np.zeros((0, n_class+1), dtype='uint32')
     #---the clouds can potentially be too big to parse directly---
     #---they are cut in batches in the order they are stored---
     while True:
@@ -390,12 +396,14 @@ def prune_labels(data_file, file_label_path, ver_batch, voxel_width, n_class):
         del xyz_full, rgb_full
         xyz = np.vstack((xyz, xyz_sub))
         rgb = np.vstack((rgb, rgb_sub))
-        labels = np.hstack((labels, labels_sub))
+        labels = np.vstack((labels, labels_sub))
         i_rows = i_rows + ver_batch
     return xyz, rgb, labels
 #------------------------------------------------------------------------------
 def interpolate_labels(data_file, xyz, labels, ver_batch):
     """interpolate the labels of the pruned cloud to the full cloud"""
+    if labels.shape[1] > 1:
+        labels = np.argmax(labels, axis = 1)
     i_rows = 0
     labels_f = np.zeros((0, ), dtype='uint8')
     #---the clouds can potentially be too big to parse directly---
@@ -416,5 +424,4 @@ def interpolate_labels(data_file, xyz, labels, ver_batch):
         del distances
         labels_f = np.hstack((labels_f, labels[neighbor].flatten()))
         i_rows = i_rows + ver_batch
-    #np.savetxt(output_name,labels_f , fmt='%i')
     return labels_f

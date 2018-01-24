@@ -19,7 +19,7 @@ namespace bpn = boost::python::numpy;
 typedef ei::Matrix<float, 3, 3> Matrix3f;
 typedef ei::Matrix<float, 3, 1> Vector3f;
 
-typedef boost::tuple< std::vector< std::vector<float> >, std::vector< std::vector<uint8_t> >, std::vector<uint8_t> > Custom_tuple;
+typedef boost::tuple< std::vector< std::vector<float> >, std::vector< std::vector<uint8_t> >, std::vector<std::vector<uint32_t> > > Custom_tuple;
 typedef boost::tuple< uint32_t, uint32_t, uint32_t > Space_tuple;
 
 struct VecToArray
@@ -46,6 +46,8 @@ struct VecvecToArray
             obj = PyArray_SimpleNew(2, dims, NPY_UINT8);
         else if (typeid(T) == typeid(float))
             obj = PyArray_SimpleNew(2, dims, NPY_FLOAT32);
+        else if (typeid(T) == typeid(uint32_t))
+            obj = PyArray_SimpleNew(2, dims, NPY_UINT32);
         void * arr_data = PyArray_DATA((PyArrayObject*)obj);
         std::size_t cell_size = sizeof(T);
         for (std::size_t i = 0; i < dims[0]; i++)
@@ -58,12 +60,12 @@ struct VecvecToArray
 
 struct to_py_tuple
 {//converts to a python tuple
-    static PyObject* convert(const Custom_tuple& c_tuple){
+    static PyObject* convert(const Custom_tuple & c_tuple){
         bp::list values;
 
         PyObject * pyo1 = VecvecToArray<float>::convert(c_tuple.get<0>());
         PyObject * pyo2 = VecvecToArray<uint8_t>::convert(c_tuple.get<1>());
-        PyObject * pyo3 = VecToArray::convert(c_tuple.get<2>());
+        PyObject * pyo3 = VecvecToArray<uint32_t>::convert(c_tuple.get<2>());
 
         values.append(bp::handle<>(bp::borrowed(pyo1)));
         values.append(bp::handle<>(bp::borrowed(pyo2)));
@@ -136,6 +138,10 @@ class AttributeGrid {
     {
         return acc_rgb.at(voxel_index);
     }
+    std::vector<uint32_t> get_acc_labels(uint64_t voxel_index)
+    {
+        return acc_labels.at(voxel_index);
+    }
     uint8_t get_label(uint64_t voxel_index)
     {//return the majority label from ths voxel
      //ignore the unlabeled points (0), unless all points are unlabeled
@@ -180,7 +186,7 @@ PyObject *  prune(const bpn::ndarray & xyz ,float voxel_size, const bpn::ndarray
     std::cout << "=========================" << std::endl;
     std::cout << "======== pruning ========" << std::endl;
     std::cout << "=========================" << std::endl;
-    std::size_t n_ver = bp::len(xyz);
+    uint64_t n_ver = bp::len(xyz);
     bool have_labels = n_classes>0;
     //---read the numpy arrays data---
     const float * xyz_data = reinterpret_cast<float*>(xyz.get_data());
@@ -218,7 +224,7 @@ PyObject *  prune(const bpn::ndarray & xyz ,float voxel_size, const bpn::ndarray
     }
     std::cout << "Reduced from " << n_ver << " to " << vox_grid.n_nonempty_voxels() << " points ("
               << std::ceil(10000 * vox_grid.n_nonempty_voxels() / n_ver)/100 << "%)" << std::endl;
-    vox_grid.initialize(8);
+    vox_grid.initialize(n_classes);
     //---accumulate points in the voxel map----
     for (std::size_t i_ver = 0; i_ver < n_ver; i_ver ++)
     {
@@ -237,7 +243,7 @@ PyObject *  prune(const bpn::ndarray & xyz ,float voxel_size, const bpn::ndarray
     //---compute pruned cloud----
     std::vector< std::vector< float > > pruned_xyz(vox_grid.n_nonempty_voxels(), std::vector< float >(3, 0.f));
     std::vector< std::vector< uint8_t > > pruned_rgb(vox_grid.n_nonempty_voxels(), std::vector< uint8_t >(3, 0));
-    std::vector< uint8_t > pruned_labels(vox_grid.n_nonempty_voxels(), 0);
+    std::vector< std::vector< uint32_t > > pruned_labels(vox_grid.n_nonempty_voxels(), std::vector< uint32_t >(n_classes + 1, 0));
     for (std::map<Space_tuple,uint64_t>::iterator it_vox=vox_grid.begin(); it_vox!=vox_grid.end(); ++it_vox)
     {//loop over the non-empty voxels and compute the average posiition/color + majority label
         uint64_t voxel_index = it_vox->second; //
@@ -253,10 +259,11 @@ PyObject *  prune(const bpn::ndarray & xyz ,float voxel_size, const bpn::ndarray
         col_uint8_t.at(1) = (uint8_t)((float) col.at(1) / count);
         col_uint8_t.at(2) = (uint8_t)((float) col.at(2) / count);
         pruned_rgb.at(voxel_index) = col_uint8_t;
-        pruned_labels.at(voxel_index) = vox_grid.get_label(voxel_index);
+        pruned_labels.at(voxel_index) = vox_grid.get_acc_labels(voxel_index);
     }
     return to_py_tuple::convert(Custom_tuple(pruned_xyz,pruned_rgb, pruned_labels));
 }
+
 
 
 PyObject * compute_geof(const bpn::ndarray & xyz ,const bpn::ndarray & target, int k_nn)

@@ -47,9 +47,9 @@ if (par_out or res_out) and (not os.path.isfile(spg_file)):
     raise ValueError("%s does not exist and is needed to output the partition  or result ply" % spg_file) 
 else:
     graph_sp, components, in_component = read_spg(spg_file)
-if (res_out) and (not os.path.isfile(res_file)):
-    raise ValueError("%s does not exist and is needed to output the result ply" % res_file) 
-else: 
+if res_out:
+    if not os.path.isfile(res_file):
+        raise ValueError("%s does not exist and is needed to output the result ply" % res_file) 
     try:
         pred_red  = np.array(h5py.File(res_file, 'r').get(area + file_name))        
         if (len(pred_red) != len(components)):
