@@ -50,7 +50,7 @@ def geof2ply(filename, xyz, geof):
 #------------------------------------------------------------------------------
 def prediction2ply(filename, xyz, prediction, n_label):
     """write a ply with colors for each class"""
-    if prediction.shape[1] > 1:
+    if len(prediction.shape) > 1 and prediction.shape[1] > 1:
         prediction = np.argmax(prediction, axis = 1)
     color = np.zeros(xyz.shape)
     for i_label in range(0, n_label + 1):
@@ -223,7 +223,7 @@ def write_features(file_name, geof, xyz, rgb, graph_nn, labels):
     data_file.create_dataset('distances', data=graph_nn["distances"], dtype='float32')
     data_file.create_dataset('xyz', data=xyz, dtype='float32')
     data_file.create_dataset('rgb', data=rgb, dtype='uint8')
-    if len(labels) > 0 and labels.shape[1]>1:
+    if len(labels) > 0 and len(labels.shape)>1 and labels.shape[1]>1:
         data_file.create_dataset('labels', data=labels, dtype='uint32')
     else:
         data_file.create_dataset('labels', data=labels, dtype='uint8')
@@ -402,7 +402,7 @@ def prune_labels(data_file, file_label_path, ver_batch, voxel_width, n_class):
 #------------------------------------------------------------------------------
 def interpolate_labels(data_file, xyz, labels, ver_batch):
     """interpolate the labels of the pruned cloud to the full cloud"""
-    if labels.shape[1] > 1:
+    if len(label.shape) > 1 and label.shape[1] > 1:
         labels = np.argmax(labels, axis = 1)
     i_rows = 0
     labels_f = np.zeros((0, ), dtype='uint8')

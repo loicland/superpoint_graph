@@ -46,12 +46,11 @@ def compute_graph_nn_2(xyz, k_nn1, k_nn2):
     return graph, target2
 #------------------------------------------------------------------------------
 def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
-    """compute the superpoint graph 
-    with superpoints and superedges features""""
+    """compute the superpoint graph with superpoints and superedges features"""
     n_com = max(in_component)+1
     in_component = np.array(in_component)
     has_labels = len(labels) > 0
-    label_hist = has_labels and labels.shape[1] > 1
+    label_hist = has_labels and len(labels.shape) > 1 and labels.shape[1] > 1
     #---compute delaunay triangulation---
     tri = Delaunay(xyz)
     #interface select the edges between different components

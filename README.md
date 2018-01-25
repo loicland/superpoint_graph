@@ -20,7 +20,9 @@ This is the official PyTorch implementation of our paper *Large-scale Point Clou
 
 3. Install Boost (1.63.0 or newer) and Eigen3, in Conda: `conda install -c anaconda boost; conda install -c omnia eigen3; conda install eigen; conda install -c r libiconv`.
 
-4. Compile the ```libply_c``` and ```libcp``` libraries:
+4. Make sure that cut pursuit was downloaded. Otherwise, clone [this repository](https://github.com/loicland/cut-pursuit) in `/partition`
+
+5. Compile the ```libply_c``` and ```libcp``` libraries:
 ```
 cd partition/ply_c
 cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.6m.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.6m -DBOOST_INCLUDEDIR=$CONDAENV/include -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
@@ -42,7 +44,7 @@ To compute the partition run
 
 ```python partition/partition_S3DIS.py --S3DIS_PATH $S3DIR_DIR```
 
-This step can take a long time and take up a lot of RAM. Prune with ```--voxel_width``` between 0.02 and 0.05 to decrease the computational load (disclaimer: the accuracy might decrease, and the trained model won't work).
+This step can take a long time and take up a lot of RAM. Prune with ```--voxel_width``` between 0.02 and 0.05 to decrease the computational load (disclaimer: the ```--reg_strength``` will have to be decreased, the accuracy might decrease, and the trained model won't work).
 
 ### Training
 
