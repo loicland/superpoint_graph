@@ -24,10 +24,10 @@ parser.add_argument('--S3DIS_PATH', default='datasets/s3dis')
 parser.add_argument('--k_nn_geof', default=45, type=int, help='number of neighbors for the geometric features')
 parser.add_argument('--k_nn_adj', default=10, type=int, help='adjacency structure for the minimal partition')
 parser.add_argument('--lambda_edge_weight', default=1., type=float, help='parameter determine the edge weight for minimal part.')
-parser.add_argument('--reg_strength', default=.16, type=float, help='regularization strength for the minimal partition')
+parser.add_argument('--reg_strength', default=0.075, type=float, help='regularization strength for the minimal partition')
 parser.add_argument('--d_se_max', default=10, type=float, help='max length of super edges')
 parser.add_argument('--n_labels', default=13, type=int, help='number of classes')
-parser.add_argument('--voxel_width', default=0.0, type=float, help='voxel size when subsampling (in m)')
+parser.add_argument('--voxel_width', default=0.02, type=float, help='voxel size when subsampling (in m)')
 args = parser.parse_args()
 
 #path to data
