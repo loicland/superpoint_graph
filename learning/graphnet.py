@@ -80,7 +80,7 @@ class GraphNetwork(nn.Module):
                 self.gconvs.append(gconv)
                 if cat_all: nfeat *= nrepeats + 1
 
-            else:
+            elif len(conf[0])>0:
                 raise NotImplementedError('Unknown module: ' + conf[0])
 
 
