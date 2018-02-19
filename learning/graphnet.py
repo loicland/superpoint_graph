@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 import ecc
-from modules import RNNGraphConvModule, ECC_CRFModule, GRUCellEx
+from modules import RNNGraphConvModule, ECC_CRFModule, GRUCellEx, LSTMCellEx
 
 
 def create_fnet(widths, orthoinit, llbias, bnidx=-1):
@@ -54,7 +54,7 @@ class GraphNetwork(nn.Module):
             elif conf[0]=='d':  #Dropout;                args: dropout_prob
                 self.add_module(str(d), nn.Dropout(p=float(conf[1]), inplace=False))
 
-            elif conf[0]=='crf':#ECC-CRF;                args: repeats
+            elif conf[0]=='crf': #ECC-CRF;               args: repeats
                 nrepeats = int(conf[1])
 
                 fnet = create_fnet(fnet_widths + [nfeat*nfeat], fnet_orthoinit, fnet_llbias, fnet_bnidx)
@@ -63,7 +63,7 @@ class GraphNetwork(nn.Module):
                 self.add_module(str(d), crf)
                 self.gconvs.append(gconv)
 
-            elif conf[0]=='gru': #GRU-ECC                args: repeats, layernorm=True, ingate=True, cat_all=True, mv=False
+            elif conf[0]=='gru' or conf[0]=='lstm': #RNN-ECC     args: repeats, layernorm=True, ingate=True, cat_all=True, mv=False
                 nrepeats = int(conf[1])
                 layernorm = bool(int(conf[2])) if len(conf)>2 else True
                 ingate = bool(int(conf[3])) if len(conf)>3 else True
@@ -71,7 +71,10 @@ class GraphNetwork(nn.Module):
                 mv = bool(int(conf[5])) if len(conf)>5 else False # whether ECC does matrix-value mult or element-wise mult
 
                 fnet = create_fnet(fnet_widths + [nfeat**2 if mv else nfeat], fnet_orthoinit, fnet_llbias, fnet_bnidx)
-                cell = GRUCellEx(nfeat, nfeat, bias=True, layernorm=layernorm, ingate=ingate)
+                if conf[0]=='gru':
+                    cell = GRUCellEx(nfeat, nfeat, bias=True, layernorm=layernorm, ingate=ingate)
+                else:
+                    cell = LSTMCellEx(nfeat, nfeat, bias=True, layernorm=layernorm, ingate=ingate)
                 gconv = RNNGraphConvModule(cell, fnet, nrepeats=nrepeats, cat_all=cat_all, edge_mem_limit=edge_mem_limit)
                 self.add_module(str(d), gconv)
                 self.gconvs.append(gconv)

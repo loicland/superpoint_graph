@@ -66,7 +66,7 @@ def main():
     parser.add_argument('--S3DIS_PATH', default='datasets/s3dis')
 
     # Model
-    parser.add_argument('--model_config', default='gru_10,f_8', help='Defines the model as a sequence of layers, see models.py for definitions of respective layers and acceptable arguments.')
+    parser.add_argument('--model_config', default='gru_10,f_8', help='Defines the model as a sequence of layers, see graphnet.py for definitions of respective layers and acceptable arguments.')
     parser.add_argument('--seed', default=1, type=int, help='Seed for random initialisation')
     parser.add_argument('--edge_attribs', default='delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d', help='Edge attribute definition, see spg_edge_features() in spg.py for definitions.')
 
