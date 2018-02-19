@@ -64,7 +64,8 @@ class PointNet(nn.Module):
     """
     def __init__(self, nf_conv, nf_fc, nf_conv_stn, nf_fc_stn, nfeat, nfeat_stn=2, nfeat_global=1, prelast_do=0.5, last_ac=False):
         super(PointNet, self).__init__()
-        self.stn = STNkD(nfeat_stn, nf_conv_stn, nf_fc_stn)
+        if nfeat_stn > 0:
+            self.stn = STNkD(nfeat_stn, nf_conv_stn, nf_fc_stn)
         self.nfeat_stn = nfeat_stn
 
         modules = []
@@ -85,9 +86,10 @@ class PointNet(nn.Module):
         self.fcs = nn.Sequential(*modules)
 
     def forward(self, input, input_global):
-        T = self.stn(input[:,:self.nfeat_stn,:])
-        xy_transf = torch.bmm(input[:,:2,:].transpose(1,2), T).transpose(1,2)
-        input = torch.cat([xy_transf, input[:,2:,:]], 1)
+        if self.nfeat_stn > 0:
+            T = self.stn(input[:,:self.nfeat_stn,:])
+            xy_transf = torch.bmm(input[:,:2,:].transpose(1,2), T).transpose(1,2)
+            input = torch.cat([xy_transf, input[:,2:,:]], 1)
 
         input = self.convs(input)
         input = nnf.max_pool1d(input, input.size(2)).squeeze(2)

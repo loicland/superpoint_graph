@@ -23,6 +23,7 @@ class RNNGraphConvModule(nn.Module):
     def __init__(self, cell, filter_net, gc_info=None, nrepeats=1, cat_all=False, edge_mem_limit=1e20):
         super(RNNGraphConvModule, self).__init__()
         self._cell = cell
+        self._isLSTM = 'LSTM' in type(cell).__name__
         self._fnet = filter_net
         self._nrepeats = nrepeats
         self._cat_all = cat_all
@@ -46,9 +47,15 @@ class RNNGraphConvModule(nn.Module):
 
         # repeatedly evaluate RNN cell
         hxs = [hx]
+        if self._isLSTM:
+            cx = Variable(hx.data.new(hx.size()).fill_(0))
+
         for r in range(self._nrepeats):
             input = ecc.GraphConvFunction(nc, nc, idxn, idxe, degs, degs_gpu, self._edge_mem_limit)(hx, weights)
-            hx = self._cell(input, hx)
+            if self._isLSTM:
+                hx, cx = self._cell(input, (hx, cx))
+            else:
+                hx = self._cell(input, hx)
             hxs.append(hx)
 
         return torch.cat(hxs,1) if self._cat_all else hx
@@ -122,6 +129,63 @@ class GRUCellEx(nn.GRUCell):
 
     def __repr__(self):
         s = super(GRUCellEx, self).__repr__() + '('
+        if self._ingate:
+            s += 'ingate'
+        if self._layernorm:
+            s += ' layernorm'
+        return s + ')'
+
+
+class LSTMCellEx(nn.LSTMCell):
+    """ Usual LSTM cell extended with layer normalization and input gate.
+    """
+    def __init__(self, input_size, hidden_size, bias=True, layernorm=True, ingate=True):
+        super(LSTMCellEx, self).__init__(input_size, hidden_size, bias)
+        self._layernorm = layernorm
+        self._ingate = ingate
+        if layernorm:
+            self.add_module('ini', nn.InstanceNorm1d(1, eps=1e-5, affine=False))
+            self.add_module('inh', nn.InstanceNorm1d(1, eps=1e-5, affine=False))
+        if ingate:
+            self.add_module('ig', nn.Linear(hidden_size, input_size, bias=True))
+
+    def _normalize(self, gi, gh):
+        if self._layernorm: # layernorm on input&hidden, as in https://arxiv.org/abs/1607.06450 (Layer Normalization)
+            gi = self._modules['ini'](gi.unsqueeze(1)).squeeze(1)
+            gh = self._modules['inh'](gh.unsqueeze(1)).squeeze(1)
+        return gi, gh
+
+    def forward(self, input, hidden):
+        if self._ingate:
+            input = nnf.sigmoid(self._modules['ig'](hidden[0])) * input
+
+        # GRUCell in https://github.com/pytorch/pytorch/blob/master/torch/nn/_functions/rnn.py extended with layer normalization
+        if input.is_cuda:
+            gi = nnf.linear(input, self.weight_ih)
+            gh = nnf.linear(hidden[0], self.weight_hh)
+            gi, gh = self._normalize(gi, gh)
+            state = torch.nn._functions.thnn.rnnFusedPointwise.LSTMFused
+            try: #pytorch >=0.3
+                return state.apply(gi, gh, hidden[1]) if self.bias_ih is None else state.apply(gi, gh, hidden[1], self.bias_ih, self.bias_hh)
+            except: #pytorch <=0.2
+                return state()(gi, gh, hidden[1]) if self.bias_ih is None else state()(gi, gh, hidden[1], self.bias_ih, self.bias_hh)
+
+        gi = nnf.linear(input, self.weight_ih, self.bias_ih)
+        gh = nnf.linear(hidden[0], self.weight_hh, self.bias_hh)
+        gi, gh = self._normalize(gi, gh)
+
+        ingate, forgetgate, cellgate, outgate = (gi+gh).chunk(4, 1)
+        ingate = nnf.sigmoid(ingate)
+        forgetgate = nnf.sigmoid(forgetgate)
+        cellgate = nnf.tanh(cellgate)
+        outgate = nnf.sigmoid(outgate)
+
+        cy = (forgetgate * hidden[1]) + (ingate * cellgate)
+        hy = outgate * nnf.tanh(cy)
+        return hy, cy
+
+    def __repr__(self):
+        s = super(LSTMCellEx, self).__repr__() + '('
         if self._ingate:
             s += 'ingate'
         if self._layernorm:

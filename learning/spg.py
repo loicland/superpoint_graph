@@ -86,6 +86,12 @@ def spg_reader(args, fname, incl_dir_in_name=False):
     edge_att['delta_avg'] = f['se_delta_mean'][:]
     edge_att['delta_std'] = f['se_delta_std'][:]
 
+    if args.spg_superedge_cutoff > 0:
+        filtered = np.linalg.norm(edge_att['delta_avg'],axis=1) < args.spg_superedge_cutoff
+        edges = edges[filtered,:]
+        edge_att['delta_avg'] = edge_att['delta_avg'][filtered,:]
+        edge_att['delta_std'] = edge_att['delta_std'][filtered,:]
+
     edge_feats = spg_edge_features(edges, node_att, edge_att, args)
 
     name = os.path.basename(fname)[:-len('.h5')]

@@ -66,7 +66,7 @@ def main():
     parser.add_argument('--S3DIS_PATH', default='datasets/s3dis')
 
     # Model
-    parser.add_argument('--model_config', default='gru_10,f_8', help='Defines the model as a sequence of layers, see models.py for definitions of respective layers and acceptable arguments.')
+    parser.add_argument('--model_config', default='gru_10,f_8', help='Defines the model as a sequence of layers, see graphnet.py for definitions of respective layers and acceptable arguments.')
     parser.add_argument('--seed', default=1, type=int, help='Seed for random initialisation')
     parser.add_argument('--edge_attribs', default='delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d', help='Edge attribute definition, see spg_edge_features() in spg.py for definitions.')
 
@@ -90,6 +90,7 @@ def main():
     parser.add_argument('--spg_augm_nneigh', default=100, type=int, help='Number of neighborhoods to sample in SPG')
     parser.add_argument('--spg_augm_order', default=3, type=int, help='Order of neighborhoods to sample in SPG')
     parser.add_argument('--spg_augm_hardcutoff', default=512, type=int, help='Maximum number of superpoints larger than args.ptn_minpts to sample in SPG')
+    parser.add_argument('--spg_superedge_cutoff', default=-1, type=float, help='Artificially constrained maximum length of superedge, -1=do not constrain')
 
     # Point net
     parser.add_argument('--ptn_minpts', default=40, type=int, help='Minimum number of points in a superpoint for computing its embedding.')
