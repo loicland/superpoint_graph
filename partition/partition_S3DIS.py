@@ -40,8 +40,8 @@ num_area = len(areas)
 times = [0,0,0]
 if not os.path.isdir(root + "clouds"):
     os.mkdir(root + "clouds")
-if not os.path.isdir(root + "features"):
-    os.mkdir(root + "features")
+if not os.path.isdir(root + "features_2cm"):
+    os.mkdir(root + "features_2cm")
 if not os.path.isdir(root + "superpoint_graphs"):
     os.mkdir(root + "superpoint_graphs")
 confusion_matrix = np.array([num_area, 1])
@@ -49,7 +49,7 @@ for area in areas:
     print("=================\n   "+area+"\n=================")
     data_folder = root + "data/"              + area
     ply_folder  = root + "clouds/"            + area
-    fea_folder  = root + "features/"          + area
+    fea_folder  = root + "features_2cm/"          + area
     spg_folder  = root + "superpoint_graphs/"+ area
     if not os.path.isdir(data_folder):
         raise ValueError("%s does not exist" % data_folder)
