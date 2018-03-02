@@ -40,7 +40,7 @@ print("=================\n   " + area + "\n=================")
 data_folder = root + "data/"               + area
 fea_folder  = root + "features/"           + area
 spg_folder  = root + "superpoint_graphs/"           + area
-res_folder  = args.odir + '/'
+res_folder  = './' + args.odir + '/'
 labels_folder =  root + "labels/"          + area
 if not os.path.isdir(data_folder):
     raise ValueError("%s do not exists" % data_folder)
