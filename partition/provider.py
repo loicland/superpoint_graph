@@ -402,7 +402,7 @@ def prune_labels(data_file, file_label_path, ver_batch, voxel_width, n_class):
 #------------------------------------------------------------------------------
 def interpolate_labels(data_file, xyz, labels, ver_batch):
     """interpolate the labels of the pruned cloud to the full cloud"""
-    if len(label.shape) > 1 and label.shape[1] > 1:
+    if len(labels.shape) > 1 and labels.shape[1] > 1:
         labels = np.argmax(labels, axis = 1)
     i_rows = 0
     labels_f = np.zeros((0, ), dtype='uint8')
