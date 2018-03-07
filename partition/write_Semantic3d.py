@@ -10,16 +10,8 @@ the prediction to the original point clouds
 """
 import os.path
 import glob
-import sys
 import numpy as np
 import argparse
-from plyfile import PlyData, PlyElement
-from timeit import default_timer as timer
-sys.path.append("./cut-pursuit/src")
-sys.path.append("./ply_c")
-import libcp
-import libply_c
-from graphs import *
 from provider import *
 parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs')
 parser.add_argument('--SEMA3D_PATH', default='datasets/semantic3D')
