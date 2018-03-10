@@ -12,7 +12,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -fopenmp -O3")
 ### Find required packages ###
 ##############################
 
-find_package(Boost 1.65.1 COMPONENTS numpy REQUIRED)
+find_package(Boost 1.65.1 COMPONENTS python numpy REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
