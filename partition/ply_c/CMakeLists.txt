@@ -40,5 +40,4 @@ add_library(ply_c SHARED ply_c.cpp)
 target_link_libraries(ply_c
     ${Boost_LIBRARIES}
     ${PYTHON_LIBRARIES}
-    boost_python
     )
