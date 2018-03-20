@@ -28,7 +28,7 @@ cd partition/ply_c
 cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.6m.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.6m -DBOOST_INCLUDEDIR=$CONDAENV/include -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
 make
 cd ..
-cd cut-pursuit
+cd cut-pursuit/src
 cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.6m.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.6m -DBOOST_INCLUDEDIR=$CONDAENV/include -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
 make
 ```
@@ -42,9 +42,7 @@ Download [S3DIS Dataset](http://buildingparser.stanford.edu/dataset.html) and ex
 
 To compute the partition run
 
-```python partition/partition_S3DIS.py --S3DIS_PATH $S3DIR_DIR```
-
-This step can take a long time and take up a lot of RAM. Prune with ```--voxel_width``` between 0.02 and 0.05 to decrease the computational load (disclaimer: the ```--reg_strength``` will have to be decreased, the accuracy might decrease, and the trained model won't work).
+```python partition/partition.py --dataset s3dis --ROOT_PATH $S3DIR_DIR --voxel_width 0.02 --reg_strength 0.075```
 
 ### Training
 
@@ -70,8 +68,9 @@ done
 ```
 To visualize the results and intermediary steps, use the visualize function in partition. For example:
 ```
-python ./partition/visualize.py --dataset s3dis --ROOT_PATH $S3DIR_DIR --res_file 'models/cv1/predictions_val' --file_path 'Area_1/conferenceRoom_1' --output_type igfpr
+python partition/visualize.py --dataset s3dis --ROOT_PATH $S3DIR_DIR --res_file 'models/cv1/predictions_val' --file_path 'Area_1/conferenceRoom_1' --output_type igfpr
 ```
+Add option ```--upsample 1``` if you want the prediction file to be on the original, unpruned data.
 
 ## Semantic3D
 
@@ -81,7 +80,7 @@ Download all point clouds and labels from [Semantic3D Dataset](http://www.semant
 
 To compute the partition run
 
-```python partition/partition_Semantic3D.py --SEMA3D_PATH $SEMA3D_DIR```
+```python partition/partition.py --dataset sema3d --ROOT_PATH $SEMA3D_DIR --voxel_width 0.05 --reg_strength 0.8 --ver_batch 5000000```
 
 It is recommended that you have at least 24GB of RAM to run this code. Otherwise, increase the ```voxel_width``` parameter to increase pruning.
 
@@ -115,9 +114,17 @@ CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $S
 
 To upsample the prediction to the unpruned data and write the .labels files for the reduced test set, run:
 
-```python partition/write_Semantic3D.py --SEMA3D_PATH $SEMA3D_DIR --odir "results/sema3d/best" --db_test_name testred```
+```python partition/write_Semantic3d.py --SEMA3D_PATH $SEMA3D_DIR --odir "results/sema3d/best" --db_test_name testred```
 
 To visualize the results and intermediary steps (on the subsampled graph), use the visualize function in partition. For example:
 ```
-python ./partition/visualize.py --dataset sema3d --ROOT_PATH $SEMA3D_DIR --res_file 'model/semantic3d/predictions_testred_best' --file_path 'test_reduced/MarketplaceFeldkirch_Station4' --output_type ifpr
+python partition/visualize.py --dataset sema3d --ROOT_PATH $SEMA3D_DIR --res_file 'model/semantic3d/predictions_testred_best' --file_path 'test_reduced/MarketplaceFeldkirch_Station4' --output_type ifpr
 ```
+# Other data sets
+
+You can apply SPG on your own data set with minimal changes:
+- adapt references to ```custom_dataset``` in ```/partition/partition.py```
+- you will need to create the function ```read_custom_format``` in ```/partition/provider.py``` which outputs xyz and rgb values, as well as semantic labels if available
+- adapt the template function ```/learning/custom_dataset.py``` to your achitecture and design choices
+- adapt references to ```custom_dataset``` in ```/learning/main.py```
+- add your data set colormap to ```get_color_from_label``` in ```/partition/provider.py```

@@ -64,6 +64,7 @@ def main():
     parser.add_argument('--db_test_name', default='val')
     parser.add_argument('--SEMA3D_PATH', default='datasets/semantic3d')
     parser.add_argument('--S3DIS_PATH', default='datasets/s3dis')
+    parser.add_argument('--CUSTOM_SET_PATH', default='datasets/custom_set')
 
     # Model
     parser.add_argument('--model_config', default='gru_10,f_8', help='Defines the model as a sequence of layers, see graphnet.py for definitions of respective layers and acceptable arguments.')
@@ -130,6 +131,10 @@ def main():
         import s3dis_dataset
         dbinfo = s3dis_dataset.get_info(args)
         create_dataset = s3dis_dataset.get_datasets
+    elif args.dataset=='custom_dataset':
+        import custom_dataset #<- to write!
+        dbinfo = custom_dataset.get_info(args)
+        create_dataset = custom_dataset.get_datasets
     else:
         raise NotImplementedError('Unknown dataset ' + args.dataset)
 
@@ -157,7 +162,7 @@ def main():
 
         loss_meter = tnt.meter.AverageValueMeter()
         acc_meter = tnt.meter.ClassErrorMeter(accuracy=True)
-        sem3d_cm = metrics.ConfusionMatrix(dbinfo['classes'])
+        confusion_matrix = metrics.ConfusionMatrix(dbinfo['classes'])
         t0 = time.time()
 
         # iterate over dataset in batches
@@ -168,6 +173,7 @@ def main():
             label_mode_cpu, label_vec_cpu, segm_size_cpu = targets[:,0], targets[:,2:], targets[:,1:].sum(1)
             if args.cuda:
                 label_mode, label_vec, segm_size = label_mode_cpu.cuda(), label_vec_cpu.float().cuda(), segm_size_cpu.float().cuda()
+
             else:
                 label_mode, label_vec, segm_size = label_mode_cpu, label_vec_cpu.float(), segm_size_cpu.float()
 
@@ -191,12 +197,12 @@ def main():
 
             o_cpu, t_cpu, tvec_cpu = filter_valid(outputs.data.cpu().numpy(), label_mode_cpu.numpy(), label_vec_cpu.numpy())
             acc_meter.add(o_cpu, t_cpu)
-            sem3d_cm.count_predicted_batch(tvec_cpu, np.argmax(o_cpu,1))
+            confusion_matrix.count_predicted_batch(tvec_cpu, np.argmax(o_cpu,1))
 
             logging.debug('Batch loss %f, Loader time %f ms, Trainer time %f ms.', loss.data[0], t_loader, t_trainer)
             t0 = time.time()
 
-        return acc_meter.value()[0], loss_meter.value()[0], sem3d_cm.get_overall_accuracy(), sem3d_cm.get_average_intersection_union()
+        return acc_meter.value()[0], loss_meter.value()[0], confusion_matrix.get_overall_accuracy(), confusion_matrix.get_average_intersection_union()
 
     ############
     def eval():
@@ -207,7 +213,7 @@ def main():
         if logging.getLogger().getEffectiveLevel() > logging.DEBUG: loader = tqdm(loader, ncols=100)
 
         acc_meter = tnt.meter.ClassErrorMeter(accuracy=True)
-        sem3d_cm = metrics.ConfusionMatrix(dbinfo['classes'])
+        confusion_matrix = metrics.ConfusionMatrix(dbinfo['classes'])
 
         # iterate over dataset in batches
         for bidx, (targets, GIs, clouds_data) in enumerate(loader):
@@ -220,9 +226,9 @@ def main():
             o_cpu, t_cpu, tvec_cpu = filter_valid(outputs.data.cpu().numpy(), label_mode_cpu.numpy(), label_vec_cpu.numpy())
             if t_cpu.size > 0:
                 acc_meter.add(o_cpu, t_cpu)
-                sem3d_cm.count_predicted_batch(tvec_cpu, np.argmax(o_cpu,1))
+                confusion_matrix.count_predicted_batch(tvec_cpu, np.argmax(o_cpu,1))
 
-        return meter_value(acc_meter), sem3d_cm.get_overall_accuracy(), sem3d_cm.get_average_intersection_union(), sem3d_cm.get_mean_class_accuracy()
+        return meter_value(acc_meter), confusion_matrix.get_overall_accuracy(), confusion_matrix.get_average_intersection_union(), confusion_matrix.get_mean_class_accuracy()
 
     ############
     def eval_final():
@@ -230,7 +236,7 @@ def main():
         model.eval()
 
         acc_meter = tnt.meter.ClassErrorMeter(accuracy=True)
-        sem3d_cm = metrics.ConfusionMatrix(dbinfo['classes'])
+        confusion_matrix = metrics.ConfusionMatrix(dbinfo['classes'])
         collected, predictions = defaultdict(list), {}
 
         # collect predictions over multiple sampling seeds
@@ -262,14 +268,14 @@ def main():
             o_cpu, t_cpu, tvec_cpu = filter_valid(o_cpu, t_cpu, tvec_cpu)
             if t_cpu.size > 0:
                 acc_meter.add(o_cpu, t_cpu)
-                sem3d_cm.count_predicted_batch(tvec_cpu, np.argmax(o_cpu,1))
+                confusion_matrix.count_predicted_batch(tvec_cpu, np.argmax(o_cpu,1))
 
         per_class_iou = {}
-        perclsiou = sem3d_cm.get_intersection_union_per_class()
+        perclsiou = confusion_matrix.get_intersection_union_per_class()
         for c, name in dbinfo['inv_class_map'].items():
             per_class_iou[name] = perclsiou[c]
 
-        return meter_value(acc_meter), sem3d_cm.get_overall_accuracy(), sem3d_cm.get_average_intersection_union(), per_class_iou, predictions,  sem3d_cm.get_mean_class_accuracy(), sem3d_cm.confusion_matrix
+        return meter_value(acc_meter), confusion_matrix.get_overall_accuracy(), confusion_matrix.get_average_intersection_union(), per_class_iou, predictions,  confusion_matrix.get_mean_class_accuracy(), confusion_matrix.confusion_matrix
 
     ############
     # Training loop
@@ -302,14 +308,14 @@ def main():
 
     # Final evaluation
     if args.test_multisamp_n>0:
-        acc_test, oacc_test, avg_iou_test, per_class_iou_test, predictions_test, avg_acc_test, sem3d_cm = eval_final()
+        acc_test, oacc_test, avg_iou_test, per_class_iou_test, predictions_test, avg_acc_test, confusion_matrix = eval_final()
         print('-> Multisample {}: Test accuracy: {}, \tTest oAcc: {}, \tTest avgIoU: {}, \tTest mAcc: {}'.format(args.test_multisamp_n, acc_test, oacc_test, avg_iou_test, avg_acc_test))
         with h5py.File(os.path.join(args.odir, 'predictions_'+args.db_test_name+'.h5'), 'w') as hf:
             for fname, o_cpu in predictions_test.items():
                 hf.create_dataset(name=fname, data=o_cpu) #(0-based classes)
         with open(os.path.join(args.odir, 'scores_'+args.db_test_name+'.txt'), 'w') as outfile:
             json.dump([{'epoch': args.start_epoch, 'acc_test': acc_test, 'oacc_test': oacc_test, 'avg_iou_test': avg_iou_test, 'per_class_iou_test': per_class_iou_test, 'avg_acc_test': avg_acc_test}], outfile)
-        np.save(os.path.join(args.odir, 'pointwise_cm.npy'), sem3d_cm)
+        np.save(os.path.join(args.odir, 'pointwise_cm.npy'), confusion_matrix)
 
 
 

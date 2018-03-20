@@ -48,13 +48,13 @@ def geof2ply(filename, xyz, geof):
     ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
     ply.write(filename)
 #------------------------------------------------------------------------------
-def prediction2ply(filename, xyz, prediction, n_label):
+def prediction2ply(filename, xyz, prediction, n_label, dataset):
     """write a ply with colors for each class"""
     if len(prediction.shape) > 1 and prediction.shape[1] > 1:
         prediction = np.argmax(prediction, axis = 1)
     color = np.zeros(xyz.shape)
     for i_label in range(0, n_label + 1):
-        color[np.where(prediction == i_label), :] = get_color_from_label(i_label, n_label)
+        color[np.where(prediction == i_label), :] = get_color_from_label(i_label, dataset)
     prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
     vertex_all = np.empty(len(xyz), dtype=prop)
     for i in range(0, 3):
@@ -63,6 +63,76 @@ def prediction2ply(filename, xyz, prediction, n_label):
         vertex_all[prop[i+3][0]] = color[:, i]
     ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
     ply.write(filename)
+#------------------------------------------------------------------------------
+def get_color_from_label(object_label, dataset):
+    """associate the color corresponding to the class"""
+    if dataset == 's3dis': #S3DIS
+        object_label = {
+            0: [0   ,   0,   0], #unlabelled .->. black
+            1: [ 233, 229, 107], #'ceiling' .-> .yellow
+            2: [  95, 156, 196], #'floor' .-> . blue
+            3: [ 179, 116,  81], #'wall'  ->  brown
+            4: [  81, 163, 148], #'column'  ->  bluegreen
+            5: [ 241, 149, 131], #'beam'  ->  salmon
+            6: [  77, 174,  84], #'window'  ->  bright green
+            7: [ 108, 135,  75], #'door'   ->  dark green
+            8: [  79,  79,  76], #'table'  ->  dark grey
+            9: [  41,  49, 101], #'chair'  ->  darkblue
+            10: [223,  52,  52], #'bookcase'  ->  red
+            11: [ 89,  47,  95], #'sofa'  ->  purple
+            12: [ 81, 109, 114], #'board'   ->  grey
+            13: [233, 233, 229], #'clutter'  ->  light grey
+            }.get(object_label, -1)
+    elif (dataset == 'sema3d'): #Semantic3D
+        object_label =  {
+            0: [0   ,   0,   0], #unlabelled .->. black
+            1: [ 200, 200, 200], #'man-made terrain'  ->  grey
+            2: [   0,  70,   0], #'natural terrain'  ->  dark green
+            3: [   0, 255,   0], #'high vegetation'  ->  bright green
+            4: [ 255, 255,   0], #'low vegetation'  ->  yellow
+            5: [ 255,   0,   0], #'building'  ->  red
+            6: [ 148,   0, 211], #'hard scape'  ->  violet
+            7: [   0, 255, 255], #'artifact'   ->  cyan
+            8: [ 255,   8, 127], #'cars'  ->  pink
+            }.get(object_label, -1)
+    elif (dataset == 'custom_dataset'): #Custom set
+        object_label =  {
+            0: [0   ,   0,   0], #unlabelled .->. black
+            1: [ 255, 0, 0], #'classe A' -> red
+            2: [ 0, 255, 0], #'classeB' -> green
+            }.get(object_label, -1)
+    else: 
+        raise ValueError('Unknown dataset: %s' % (dataset))
+    if object_label == -1:
+        raise ValueError('Type not recognized: %s' % (object_label))
+    return object_label
+#------------------------------------------------------------------------------
+def read_s3dis_format(raw_path, label_out=True):
+#S3DIS specific
+    """extract data from a room folder"""
+    room_ver = genfromtxt(raw_path, delimiter=' ')
+    xyz = np.array(room_ver[:, 0:3], dtype='float32')
+    rgb = np.array(room_ver[:, 3:6], dtype='uint8')
+    if not label_out:
+        return xyz, rgb
+    n_ver = len(room_ver)
+    del room_ver
+    nn = NearestNeighbors(1, algorithm='kd_tree').fit(xyz)
+    room_labels = np.zeros((n_ver,), dtype='uint8')
+    room_object_indices = np.zeros((n_ver,), dtype='uint32')
+    objects = glob.glob(os.path.dirname(raw_path) + "/Annotations/*.txt")
+    i_object = 0
+    for single_object in objects:
+        object_name = os.path.splitext(os.path.basename(single_object))[0]
+        print("        adding object " + str(i_object) + " : "  + object_name)
+        object_class = object_name.split('_')[0]
+        object_label = object_name_to_label(object_class)
+        obj_ver = genfromtxt(single_object, delimiter=' ')
+        distances, obj_ind = nn.kneighbors(obj_ver[:, 0:3])
+        room_labels[obj_ind] = object_label
+        room_object_indices[obj_ind] = i_object
+        i_object = i_object + 1
+    return xyz, rgb, room_labels
 #------------------------------------------------------------------------------
 def object_name_to_label(object_class):
     """convert from object name in S3DIS to an int"""
@@ -84,67 +154,82 @@ def object_name_to_label(object_class):
         }.get(object_class, 0)
     return object_label
 #------------------------------------------------------------------------------
-def get_color_from_label(object_label, n_label):
-    """associate the color corresponding to the class"""
-    if n_label == 13: #S3DIS
-        object_label = {
-            0: [0   ,   0,   0], #unlabelled .->. black
-            1: [ 233, 229, 107], #'ceiling' .-> .yellow
-            2: [  95, 156, 196], #'floor' .-> . blue
-            3: [ 179, 116,  81], #'wall'  ->  brown
-            4: [  81, 163, 148], #'column'  ->  bluegreen
-            5: [ 241, 149, 131], #'beam'  ->  salmon
-            6: [  77, 174,  84], #'window'  ->  bright green
-            7: [ 108, 135,  75], #'door'   ->  dark green
-            8: [  79,  79,  76], #'table'  ->  dark grey
-            9: [  41,  49, 101], #'chair'  ->  darkblue
-            10: [223,  52,  52], #'bookcase'  ->  red
-            11: [ 89,  47,  95], #'sofa'  ->  purple
-            12: [ 81, 109, 114], #'board'   ->  grey
-            13: [233, 233, 229], #'clutter'  ->  light grey
-            }.get(object_label, -1)
-    if (object_label==-1):
-        raise ValueError('Type not recognized: %s' % (object_label))
-    if (n_label == 8): #Semantic3D
-        object_label =  {
-            0: [0   ,   0,   0], #unlabelled .->. black
-            1: [ 200, 200, 200], #'man-made terrain'  ->  grey
-            2: [   0,  70,   0], #'natural terrain'  ->  dark green
-            3: [   0, 255,   0], #'high vegetation'  ->  bright green
-            4: [ 255, 255,   0], #'low vegetation'  ->  yellow
-            5: [ 255,   0,   0], #'building'  ->  red
-            6: [ 148,   0, 211], #'hard scape'  ->  violet
-            7: [   0, 255, 255], #'artifact'   ->  cyan
-            8: [ 255,   8, 127], #'cars'  ->  pink
-            }.get(object_label, -1)
-    if object_label == -1:
-        raise ValueError('Type not recognized: %s' % (object_label))
-    return object_label
+def read_semantic3d_format(data_file, n_class, file_label_path, voxel_width, ver_batch):
+    """read the format of semantic3d. 
+    ver_batch : if ver_batch>0 then load the file ver_batch lines at a time.
+                useful for huge files (> 5millions lines)
+    voxel_width: if voxel_width>0, voxelize data with a regular grid
+    n_class : the number of class; if 0 won't search for labels (test set)
+    implements batch-loading for huge files
+    and pruning"""
+    i_rows = 0
+    xyz = np.zeros((0, 3), dtype='float32')
+    rgb = np.zeros((0, 3), dtype='uint8')
+    labels = np.zeros((0, n_class+1), dtype='uint32')
+    #---the clouds can potentially be too big to parse directly---
+    #---they are cut in batches in the order they are stored---
+    while True:
+        try:
+            if ver_batch>0:
+                vertices = np.genfromtxt(data_file
+                         , delimiter=' ', max_rows=ver_batch
+                         , skip_header=i_rows)
+            else:
+                vertices = np.genfromtxt(data_file, delimiter=' ')
+                break
+                
+        except StopIteration:
+            #end of file
+            break
+        xyz_full = np.array(vertices[:, 0:3], dtype='float32')
+        rgb_full = np.array(vertices[:, 4:7], dtype='uint8')
+        del vertices
+        if n_class > 0:
+            labels_full = np.genfromtxt(file_label_path, dtype="u1", delimiter=' '
+                        , max_rows=ver_batch, skip_header=i_rows)
+                
+        if voxel_width > 0:
+            if n_class > 0:
+                xyz_sub, rgb_sub, labels_sub = libply_c.prune(xyz_full, voxel_width
+                                             , rgb_full, labels_full, n_class)
+                labels = np.vstack((labels, labels_sub))
+            else:
+                xyz_sub, rgb_sub, l = libply_c.prune(xyz_full, voxel_width
+                                    , rgb_full, np.zeros(1, dtype='uint8'), 0)
+            del xyz_full, rgb_full
+            xyz = np.vstack((xyz, xyz_sub))
+            rgb = np.vstack((rgb, rgb_sub))
+        i_rows = i_rows + ver_batch        
+    if n_class>0:
+        return xyz, rgb, labels
+    else:
+        return xyz, rgb
 #------------------------------------------------------------------------------
-def get_objects(raw_path):
-#S3DIS specific
-    """extract data from a room folder"""
-    room_ver = genfromtxt(raw_path, delimiter=' ')
-    xyz = np.array(room_ver[:, 0:3], dtype='float32')
-    rgb = np.array(room_ver[:, 3:6], dtype='uint8')
-    n_ver = len(room_ver)
-    del room_ver
-    nn = NearestNeighbors(1, algorithm='kd_tree').fit(xyz)
-    room_labels = np.zeros((n_ver,), dtype='uint8')
-    room_object_indices = np.zeros((n_ver,), dtype='uint32')
-    objects = glob.glob(os.path.dirname(raw_path) + "/Annotations/*.txt")
-    i_object = 0
-    for single_object in objects:
-        object_name = os.path.splitext(os.path.basename(single_object))[0]
-        print("        adding object " + str(i_object) + " : "  + object_name)
-        object_class = object_name.split('_')[0]
-        object_label = object_name_to_label(object_class)
-        obj_ver = genfromtxt(single_object, delimiter=' ')
-        distances, obj_ind = nn.kneighbors(obj_ver[:, 0:3])
-        room_labels[obj_ind] = object_label
-        room_object_indices[obj_ind] = i_object
-        i_object = i_object + 1
-    return xyz, rgb, room_labels, room_object_indices
+def read_ply(filename):
+    """convert from a ply file. include the label and the object number"""
+    #---read the ply file--------
+    plydata = PlyData.read(filename)
+    xyz = np.stack([plydata['vertex'][n] for n in['x', 'y', 'z']], axis=1)
+    try:
+        rgb = np.stack([plydata['vertex'][n]
+                        for n in ['red', 'green', 'blue']]
+                       , axis=1).astype(np.uint8)
+    except ValueError:
+        rgb = np.stack([plydata['vertex'][n]
+                        for n in ['r', 'g', 'b']]
+                       , axis=1).astype(np.float32)
+    if np.max(rgb) > 1:
+        rgb = rgb
+    try:
+        object_indices = plydata['vertex']['object_index']
+        labels = plydata['vertex']['label']
+        return xyz, rgb, labels, object_indices
+    except ValueError:
+        try:
+            labels = plydata['vertex']['label']
+            return xyz, rgb, labels
+        except ValueError:
+            return xyz, rgb
 #------------------------------------------------------------------------------
 def write_ply_obj(filename, xyz, rgb, labels, object_indices):
     """write into a ply file. include the label and the object number"""
@@ -184,32 +269,6 @@ def write_ply(filename, xyz, rgb):
         vertex_all[prop[i_prop+3][0]] = rgb[:, i_prop]
     ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
     ply.write(filename)
-#------------------------------------------------------------------------------
-def read_ply(filename):
-    """convert from a ply file. include the label and the object number"""
-    #---read the ply file--------
-    plydata = PlyData.read(filename)
-    xyz = np.stack([plydata['vertex'][n] for n in['x', 'y', 'z']], axis=1)
-    try:
-        rgb = np.stack([plydata['vertex'][n]
-                        for n in ['red', 'green', 'blue']]
-                       , axis=1).astype(np.uint8)
-    except ValueError:
-        rgb = np.stack([plydata['vertex'][n]
-                        for n in ['r', 'g', 'b']]
-                       , axis=1).astype(np.float32)
-    if np.max(rgb) > 1:
-        rgb = rgb
-    try:
-        object_indices = plydata['vertex']['object_index']
-        labels = plydata['vertex']['label']
-        return xyz, rgb, labels, object_indices
-    except ValueError:
-        try:
-            labels = plydata['vertex']['label']
-            return xyz, rgb, labels
-        except ValueError:
-            return xyz, rgb
 #------------------------------------------------------------------------------
 def write_features(file_name, geof, xyz, rgb, graph_nn, labels):
     """write the geometric features, labels and clouds in a h5 file"""
@@ -343,64 +402,7 @@ def reduced_labels2full(labels_red, components, n_ver):
         labels_full[components[i_com]] = labels_red[i_com]
     return labels_full
 #------------------------------------------------------------------------------
-def prune(data_file, ver_batch, voxel_width):
-    """prune the cloud with a regular voxel grid"""
-    i_rows = 0
-    xyz = np.zeros((0, 3), dtype='float32')
-    rgb = np.zeros((0, 3), dtype='uint8')
-    #---the clouds can potentially be too big to parse directly---
-    #---they are cut in batches in the order they are stored---
-    while True:
-        try:
-            vertices = np.genfromtxt(data_file
-                                     , delimiter=' ', max_rows=ver_batch
-                                     , skip_header=i_rows)
-        except StopIteration:
-            #end of file
-            break
-        xyz_full = np.array(vertices[:, 0:3], dtype='float32')
-        rgb_full = np.array(vertices[:, 4:7], dtype='uint8')
-        del vertices
-        xyz_sub, rgb_sub, l = libply_c.prune(xyz_full, voxel_width
-                                             , rgb_full, np.zeros(1, dtype='uint8'), 0)
-        del xyz_full, rgb_full, l
-        xyz = np.vstack((xyz, xyz_sub))
-        rgb = np.vstack((rgb, rgb_sub))
-        i_rows = i_rows + ver_batch
-    return xyz, rgb
-#------------------------------------------------------------------------------
-def prune_labels(data_file, file_label_path, ver_batch, voxel_width, n_class):
-    """prune the cloud with a regular voxel grid - with labels"""
-    i_rows = 0
-    xyz = np.zeros((0, 3), dtype='float32')
-    rgb = np.zeros((0, 3), dtype='uint8')
-    labels = np.zeros((0, n_class+1), dtype='uint32')
-    #---the clouds can potentially be too big to parse directly---
-    #---they are cut in batches in the order they are stored---
-    while True:
-        try:
-            vertices = np.genfromtxt(data_file
-                                     , delimiter=' ', max_rows=ver_batch
-                                     , skip_header=i_rows)
-        except StopIteration:
-            #end of file
-            break
-        xyz_full = np.array(vertices[:, 0:3], dtype='float32')
-        rgb_full = np.array(vertices[:, 4:7], dtype='uint8')
-        del vertices
-        labels_full = np.genfromtxt(file_label_path, dtype="u1", delimiter=' '
-                                    , max_rows=ver_batch, skip_header=i_rows)
-        xyz_sub, rgb_sub, labels_sub = libply_c.prune(xyz_full, voxel_width
-                                                      , rgb_full, labels_full
-                                                      , n_class)
-        del xyz_full, rgb_full
-        xyz = np.vstack((xyz, xyz_sub))
-        rgb = np.vstack((rgb, rgb_sub))
-        labels = np.vstack((labels, labels_sub))
-        i_rows = i_rows + ver_batch
-    return xyz, rgb, labels
-#------------------------------------------------------------------------------
-def interpolate_labels(data_file, xyz, labels, ver_batch):
+def interpolate_labels_batch(data_file, xyz, labels, ver_batch):
     """interpolate the labels of the pruned cloud to the full cloud"""
     if len(labels.shape) > 1 and labels.shape[1] > 1:
         labels = np.argmax(labels, axis = 1)
@@ -411,13 +413,18 @@ def interpolate_labels(data_file, xyz, labels, ver_batch):
     nn = NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(xyz)
     while True:
         try:
-            vertices = np.genfromtxt(data_file
-                                     , delimiter=' ', max_rows=ver_batch
-                                     , skip_header=i_rows)
+            if ver_batch>0:
+                print("read lines %d to %d" % (i_rows, i_rows + ver_batch))
+                vertices = np.genfromtxt(data_file
+                         , delimiter=' ', max_rows=ver_batch
+                         , skip_header=i_rows)
+            else:
+                vertices = np.genfromtxt(data_file
+                         , delimiter=' ')
+                break
         except StopIteration:
             #end of file
             break
-        print("*")
         xyz_full = np.array(vertices[:, 0:3], dtype='float32')
         del vertices
         distances, neighbor = nn.kneighbors(xyz_full)
@@ -425,3 +432,11 @@ def interpolate_labels(data_file, xyz, labels, ver_batch):
         labels_f = np.hstack((labels_f, labels[neighbor].flatten()))
         i_rows = i_rows + ver_batch
     return labels_f
+#------------------------------------------------------------------------------
+def interpolate_labels(xyz_up, xyz, labels, ver_batch):
+    """interpolate the labels of the pruned cloud to the full cloud"""
+    if len(labels.shape) > 1 and labels.shape[1] > 1:
+        labels = np.argmax(labels, axis = 1)
+    nn = NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(xyz)
+    distances, neighbor = nn.kneighbors(xyz_up)
+    return labels[neighbor].flatten()

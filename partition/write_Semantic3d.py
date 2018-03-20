@@ -71,6 +71,5 @@ for file in files:
     labels_red = np.array(res_file.get(area + file_name_short))
     print("    upsampling...")
     labels_full = reduced_labels2full(labels_red, components, n_ver)
-    labels_ups = interpolate_labels(data_file, xyz, labels_full, args.ver_batch)
+    labels_ups = interpolate_labels_batch(data_file, xyz, labels_full, args.ver_batch)
     np.savetxt(label_file, labels_ups, delimiter=' ', fmt='%d')   # X is an array
-    prediction2ply(data_folder + "_pred.ply", xyz, labels_full+1, 8)
