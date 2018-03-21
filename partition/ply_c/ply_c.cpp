@@ -88,7 +88,7 @@ class AttributeGrid {
        index(0)
     {}
     //---methods for the occurence grid---
-    uint32_t n_nonempty_voxels()
+    uint64_t n_nonempty_voxels()
     {
         return this->index;
     }
