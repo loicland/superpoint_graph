@@ -120,6 +120,9 @@ To visualize the results and intermediary steps (on the subsampled graph), use t
 ```
 python partition/visualize.py --dataset sema3d --ROOT_PATH $SEMA3D_DIR --res_file 'model/semantic3d/predictions_testred_best' --file_path 'test_reduced/MarketplaceFeldkirch_Station4' --output_type ifpr
 ```
+To see the evaluation on the full set on a trained model type: 
+```python learning/evaluate_s3dis.py --odir results/s3dis/best --cvfold 123456``` 
+
 # Other data sets
 
 You can apply SPG on your own data set with minimal changes:

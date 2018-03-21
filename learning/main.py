@@ -14,7 +14,7 @@ import json
 import os
 import sys
 import math
-import argparse   
+import argparse
 import ast
 from tqdm import tqdm
 import logging
