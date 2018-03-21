@@ -181,6 +181,8 @@ def read_semantic3d_format(data_file, n_class, file_label_path, voxel_width, ver
         except StopIteration:
             #end of file
             break
+        if len(vertices)==0:
+            break
         xyz_full = np.array(vertices[:, 0:3], dtype='float32')
         rgb_full = np.array(vertices[:, 4:7], dtype='uint8')
         del vertices
@@ -424,6 +426,8 @@ def interpolate_labels_batch(data_file, xyz, labels, ver_batch):
                 break
         except StopIteration:
             #end of file
+            break
+        if len(vertices)==0:
             break
         xyz_full = np.array(vertices[:, 0:3], dtype='float32')
         del vertices

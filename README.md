@@ -42,7 +42,7 @@ Download [S3DIS Dataset](http://buildingparser.stanford.edu/dataset.html) and ex
 
 To compute the partition run
 
-```python partition/partition.py --dataset s3dis --ROOT_PATH $S3DIR_DIR --voxel_width 0.02 --reg_strength 0.075```
+```python partition/partition.py --dataset s3dis --ROOT_PATH $S3DIR_DIR --voxel_width 0.03 --reg_strength 0.03```
 
 ### Training
 
