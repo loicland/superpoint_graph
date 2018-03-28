@@ -19,8 +19,9 @@ parser.add_argument('--res_file', default='../models/cv1/predictions_val', help=
 parser.add_argument('--file_path', default='Area_1/conferenceRoom_1', help='file to output (must include the area / set in its path)')
 parser.add_argument('--upsample', default=0, type=int, help='if 1, upsample the prediction to the original cloud (if the files is huge it can take a very long and use a lot of memory - avoid on sema3d)')
 parser.add_argument('--ver_batch', default=0, type=int, help='Batch size for reading large files')
-parser.add_argument('--output_type', default='igfpr', help='which cloud to output: i = rgb pointcloud \
-                    ,g = ground truth, f = geof, p = partition, r = result')
+parser.add_argument('--output_type', default='igfpres', help='which cloud to output: i = input rgb pointcloud \
+                    , g = ground truth, f = geometric features, p = partition, r = prediction result \
+                    , e = error, s = SPG')
 args = parser.parse_args()
 #---path to data---------------------------------------------------------------
 #root of the data directory
@@ -30,6 +31,8 @@ gt_out  = 'g' in args.output_type
 fea_out = 'f' in args.output_type
 par_out = 'p' in args.output_type
 res_out = 'r' in args.output_type
+err_out = 'e' in args.output_type
+spg_out = 's' in args.output_type
 folder = os.path.split(args.file_path)[0] + '/'
 file_name = os.path.split(args.file_path)[1]
 
@@ -55,8 +58,8 @@ geof, xyz, rgb, graph_nn, labels = read_features(fea_file)
 if (par_out or res_out) and (not os.path.isfile(spg_file)):    
     raise ValueError("%s does not exist and is needed to output the partition  or result ply" % spg_file) 
 else:
-    graph_sp, components, in_component = read_spg(spg_file)
-if res_out:
+    graph_spg, components, in_component = read_spg(spg_file)
+if res_out or err_out:
     if not os.path.isfile(res_file):
         raise ValueError("%s does not exist and is needed to output the result ply" % res_file) 
     try:
@@ -87,7 +90,13 @@ if res_out and not bool(args.upsample):
     print("writing the prediction file...")
     prediction2ply(ply_file + "_pred.ply", xyz, pred_full+1, n_labels,  args.dataset)
     
-
+if err_out:
+    print("writing the error file...")
+    error2ply(ply_file + "_err.ply", xyz, rgb, labels, pred_full+1)
+    
+if spg_out:
+    print("writing the SPG file...")
+    spg2ply(ply_file + "_spg.ply", graph_spg)
     
 if res_out and bool(args.upsample):
     if args.dataset=='s3dis':

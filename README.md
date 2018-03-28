@@ -66,10 +66,24 @@ CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset s3dis --S3DIS_PATH $S3D
 --test_nth_epoch 50 --model_config 'gru_10,f_13' --ptn_nfeat_stn 14 --nworkers 2 --odir "results/s3dis/best/cv${FOLD}" --resume RESUME; \
 done
 ```
-To visualize the results and intermediary steps, use the visualize function in partition. For example:
+
+To evaluate quantitavily on the full set on a trained model type: 
+```python learning/evaluate_s3dis.py --odir results/s3dis/best --cvfold 123456``` 
+
+To visualize the results and all intermediary steps, use the visualize function in partition. For example:
 ```
-python partition/visualize.py --dataset s3dis --ROOT_PATH $S3DIR_DIR --res_file 'models/cv1/predictions_val' --file_path 'Area_1/conferenceRoom_1' --output_type igfpr
+python partition/visualize.py --dataset s3dis --ROOT_PATH $S3DIR_DIR --res_file 'models/cv1/predictions_val' --file_path 'Area_1/conferenceRoom_1' --output_type igfpres
 ```
+
+```output_type``` defined as such:
+- ```'i'``` = input rgb point cloud
+- ```'g'``` = ground truth (if available), with the predefined class to color mapping
+- ```'f'``` = geometric feature with color code: red = linearity, green = planarity, blue = verticality
+- ```'p'``` = partition, with a random color for each superpoint
+- ```'r'``` = result cloud, with the predefined class to color mapping
+- ```'e'``` = error cloud, with green/red hue for correct/faulty prediction 
+- ```'s'``` = superedge structure of the superpoint (toggle wireframe on meshlab to view it)
+
 Add option ```--upsample 1``` if you want the prediction file to be on the original, unpruned data.
 
 ## Semantic3D
@@ -98,7 +112,6 @@ CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $S
 ```
 The trained network can be downloaded [here](http://imagine.enpc.fr/~simonovm/largescale/model_sema3d_trainval.pth.tar) and loaded with `--resume` argument.
 
-
 To test this network on the full test set, run
 ```
 CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $SEMA3D_DIR --db_test_name testfull --db_train_name trainval \
@@ -118,16 +131,16 @@ To upsample the prediction to the unpruned data and write the .labels files for 
 
 To visualize the results and intermediary steps (on the subsampled graph), use the visualize function in partition. For example:
 ```
-python partition/visualize.py --dataset sema3d --ROOT_PATH $SEMA3D_DIR --res_file 'model/semantic3d/predictions_testred_best' --file_path 'test_reduced/MarketplaceFeldkirch_Station4' --output_type ifpr
+python partition/visualize.py --dataset sema3d --ROOT_PATH $SEMA3D_DIR --res_file 'model/semantic3d/predictions_testred_best' --file_path 'test_reduced/MarketplaceFeldkirch_Station4' --output_type ifprs
 ```
-To see the evaluation on the full set on a trained model type: 
-```python learning/evaluate_s3dis.py --odir results/s3dis/best --cvfold 123456``` 
+
+avoid ```--upsample 1``` as it can can take a very long time on the largest clouds.
 
 # Other data sets
 
 You can apply SPG on your own data set with minimal changes:
 - adapt references to ```custom_dataset``` in ```/partition/partition.py```
-- you will need to create the function ```read_custom_format``` in ```/partition/provider.py``` which outputs xyz and rgb values, as well as semantic labels if available
+- you will need to create the function ```read_custom_format``` in ```/partition/provider.py``` which outputs xyz and rgb values, as well as semantic labels if available (already implemented for ply files)
 - adapt the template function ```/learning/custom_dataset.py``` to your achitecture and design choices
 - adapt references to ```custom_dataset``` in ```/learning/main.py```
 - add your data set colormap to ```get_color_from_label``` in ```/partition/provider.py```
