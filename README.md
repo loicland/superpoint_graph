@@ -34,6 +34,14 @@ make
 ```
 where `$CONDAENV` is the path to your conda environment. The code was tested on Ubuntu 14.04 with Python 3.6 and PyTorch 0.2.
 
+### Troubleshooting
+
+Common sources of error and how to fix them:
+- $CONDA_ENV is not defined : define it or replace $CONDA_ENV by the absolute path of your environment (find it with ```locate anaconda```)
+- anaconda uses a different version of python than 3.6m : adapt it in the command. Find which version of python conda is using with ```locate anaconda3/lib/libpython```
+- you are using boost 1.62 or older: update it
+- cut pursuit did not download: manually clone it in the ```partition``` folder.
+
 ## S3DIS
 
 Download [S3DIS Dataset](http://buildingparser.stanford.edu/dataset.html) and extract `Stanford3dDataset_v1.2_Aligned_Version.zip` to `$S3DIR_DIR/data`, where `$S3DIR_DIR` is set to dataset directory.
