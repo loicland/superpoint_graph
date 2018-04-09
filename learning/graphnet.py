@@ -65,12 +65,12 @@ class GraphNetwork(nn.Module):
 
             elif conf[0]=='gru' or conf[0]=='lstm': #RNN-ECC     args: repeats, layernorm=True, ingate=True, cat_all=True, mv=False
                 nrepeats = int(conf[1])
-                layernorm = bool(int(conf[2])) if len(conf)>2 else True
-                ingate = bool(int(conf[3])) if len(conf)>3 else True
-                cat_all = bool(int(conf[4])) if len(conf)>4 else True
-                mv = bool(int(conf[5])) if len(conf)>5 else False # whether ECC does matrix-value mult or element-wise mult
+                vv = bool(int(conf[2])) if len(conf)>2 else True # whether ECC does matrix-value mult or element-wise mult
+                layernorm = bool(int(conf[3])) if len(conf)>3 else True
+                ingate = bool(int(conf[4])) if len(conf)>4 else True
+                cat_all = bool(int(conf[5])) if len(conf)>5 else True
 
-                fnet = create_fnet(fnet_widths + [nfeat**2 if mv else nfeat], fnet_orthoinit, fnet_llbias, fnet_bnidx)
+                fnet = create_fnet(fnet_widths + [nfeat**2 if not vv else nfeat], fnet_orthoinit, fnet_llbias, fnet_bnidx)
                 if conf[0]=='gru':
                     cell = GRUCellEx(nfeat, nfeat, bias=True, layernorm=layernorm, ingate=ingate)
                 else:
