@@ -135,11 +135,11 @@ CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $S
 
 To upsample the prediction to the unpruned data and write the .labels files for the reduced test set, run:
 
-```python partition/write_Semantic3d.py --SEMA3D_PATH $SEMA3D_DIR --odir "results/sema3d/best" --db_test_name testred```
+```python partition/write_Semantic3d.py --SEMA3D_PATH $SEMA3D_DIR --odir "results/sema3d/trainval_best" --db_test_name testred```
 
 To visualize the results and intermediary steps (on the subsampled graph), use the visualize function in partition. For example:
 ```
-python partition/visualize.py --dataset sema3d --ROOT_PATH $SEMA3D_DIR --res_file 'model/semantic3d/predictions_testred_best' --file_path 'test_reduced/MarketplaceFeldkirch_Station4' --output_type ifprs
+python partition/visualize.py --dataset sema3d --ROOT_PATH $SEMA3D_DIR --res_file 'results/sema3d/trainval_best/prediction_testred' --file_path 'test_reduced/MarketplaceFeldkirch_Station4' --output_type ifprs
 ```
 
 avoid ```--upsample 1``` as it can can take a very long time on the largest clouds.
