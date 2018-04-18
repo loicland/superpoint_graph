@@ -148,7 +148,12 @@ avoid ```--upsample 1``` as it can can take a very long time on the largest clou
 
 You can apply SPG on your own data set with minimal changes:
 - adapt references to ```custom_dataset``` in ```/partition/partition.py```
-- you will need to create the function ```read_custom_format``` in ```/partition/provider.py``` which outputs xyz and rgb values, as well as semantic labels if available (already implemented for ply files)
+- you will need to create the function ```read_custom_format``` in ```/partition/provider.py``` which outputs xyz and rgb values, as well as semantic labels if available (already implemented for ply and las files)
 - adapt the template function ```/learning/custom_dataset.py``` to your achitecture and design choices
 - adapt references to ```custom_dataset``` in ```/learning/main.py```
 - add your data set colormap to ```get_color_from_label``` in ```/partition/provider.py```
+
+# Datasets without RGB
+If your data does not have RGB values you can easily use SPG. You will need to follow the instructions in ```partition/partition.ply``` regarding the pruning.
+You will need to adapt the ```/learning/custom_dataset.py``` file so that it does not refer ro RGB values.
+You should absolutely not use a model pretrained on values with RGB. instead, retrain a model from scratch using the ```--pc_attribs xyzelpsv``` option to remove RGB from the shape embedding input.

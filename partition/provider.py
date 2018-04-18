@@ -14,6 +14,7 @@ from plyfile import PlyData, PlyElement
 import numpy as np
 from numpy import genfromtxt
 import h5py
+#import laspy
 from sklearn.neighbors import NearestNeighbors
 sys.path.append("./ply_c")
 sys.path.append("./partition/ply_c")
@@ -274,6 +275,20 @@ def read_ply(filename):
         except ValueError:
             return xyz, rgb
 #------------------------------------------------------------------------------
+def read_las(filename):
+    """convert from a las file with no rgb"""
+    #---read the ply file--------
+    try:
+        inFile = laspy.file.File(filename, mode='r')
+    except NameError:
+        raise ValueError("laspy package not found. uncomment import in /partition/provider and make sure it is installed in your environment")
+    N_points = len(inFile)
+    x = np.reshape(inFile.X, (N_points,1))
+    y = np.reshape(inFile.Y, (N_points,1))
+    z = np.reshape(inFile.Z, (N_points,1))
+    xyz = np.hstack((x,y,z)).astype('f4')
+    return xyz
+#------------------------------------------------------------------------------
 def write_ply_obj(filename, xyz, rgb, labels, object_indices):
     """write into a ply file. include the label and the object number"""
     prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1')
@@ -325,6 +340,8 @@ def write_features(file_name, geof, xyz, rgb, graph_nn, labels):
     data_file.create_dataset('distances', data=graph_nn["distances"], dtype='float32')
     data_file.create_dataset('xyz', data=xyz, dtype='float32')
     data_file.create_dataset('rgb', data=rgb, dtype='uint8')
+    if len(rgb) > 0:
+        data_file.create_dataset('rgb', data=rgb, dtype='uint8')
     if len(labels) > 0 and len(labels.shape)>1 and labels.shape[1]>1:
         data_file.create_dataset('labels', data=labels, dtype='uint32')
     else:
@@ -336,31 +353,24 @@ def read_features(file_name):
     data_file = h5py.File(file_name, 'r')
     #fist get the number of vertices
     n_ver = len(data_file["linearity"])
-    n_edg = len(data_file["source"])
     has_labels = len(data_file["labels"])
     #the labels can be empty in the case of a test set
     if has_labels:
-        #labels = rgb = np.zeros((n_ver, ), dtype='uint8')
         labels = np.array(data_file["labels"])
     else:
         labels = []
     #---create the arrays---
     geof = np.zeros((n_ver, 4), dtype='float32')
-    xyz = np.zeros((n_ver, 3), dtype='float32')
-    rgb = np.zeros((n_ver, 3), dtype='uint8')
-    source = np.zeros((n_edg,), dtype='uint32')
-    target = np.zeros((n_edg,), dtype='uint32')
-    distances = np.zeros((n_edg,), dtype='float32')
     #---fill the arrays---
     geof[:, 0] = data_file["linearity"]
     geof[:, 1] = data_file["planarity"]
     geof[:, 2] = data_file["scattering"]
     geof[:, 3] = data_file["verticality"]
-    xyz[:] = data_file["xyz"]
-    rgb[:] = data_file["rgb"]
-    source[:] = data_file["source"]
-    target[:] = data_file["target"]
-    distances[:] = data_file["distances"]
+    xyz = data_file["xyz"][:]
+    rgb = data_file["rgb"][:]
+    source = data_file["source"][:]
+    target = data_file["target"][:]
+    distances = data_file["distances"][:]
     #---set the graph---
     graph_nn = dict([("is_nn", True)])
     graph_nn["source"] = source

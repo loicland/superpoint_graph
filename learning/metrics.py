@@ -62,7 +62,8 @@ class ConfusionMatrix:
 
   def get_average_intersection_union(self):
     values = self.get_intersection_union_per_class()
-    return sum(values) / len(values)
+    class_seen = ((self.confusion_matrix.sum(1)+self.confusion_matrix.sum(0))!=0).sum()
+    return sum(values) / class_seen
 
   def get_mean_class_accuracy(self):  # added
     re = 0

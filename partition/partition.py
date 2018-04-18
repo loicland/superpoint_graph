@@ -9,10 +9,9 @@ import sys
 import numpy as np
 import argparse
 from timeit import default_timer as timer
-sys.path.append("./cut-pursuit/src")
-sys.path.append("./ply_c")
 sys.path.append("./partition/cut-pursuit/src")
 sys.path.append("./partition/ply_c")
+sys.path.append("./partition")
 import libcp
 import libply_c
 from graphs import *
@@ -78,8 +77,10 @@ for folder in folders:
     elif args.dataset=='sema3d':
         files = glob.glob(data_folder+"*.txt")
     elif args.dataset=='custom_dataset':
-        #list all files in the folder
+        #list all ply files in the folder
         files = glob.glob(data_folder+"*.ply")
+        #list all las files in the folder
+        files = glob.glob(data_folder+"*.las")
         
     if (len(files) == 0):
         raise ValueError('%s is empty' % data_folder)
@@ -103,7 +104,7 @@ for folder in folders:
             spg_file   = spg_folder  + file_name_short + '.h5'
         elif args.dataset=='custom_dataset':
             #adapt to your hierarchy. The following 4 files must be defined
-            data_file   = data_folder      + file_name + ".ply"
+            data_file   = data_folder      + file_name + '.ply' #or .las
             cloud_file  = cloud_folder     + file_name
             fea_file    = fea_folder       + file_name + '.h5'
             spg_file    = spg_folder       + file_name + '.h5'
@@ -131,10 +132,17 @@ for folder in folders:
                     labels = []
             elif args.dataset=='custom_dataset':
                 #implement in provider.py your own read_custom_format outputing xyz, rgb, labels
-                #here is an example for ply files
-                xyz, rgb, labels = read_ply(data_file);
-                #if no labels available simpley set labels = []
-                
+                #example for ply files
+                xyz, rgb, labels = read_ply(data_file)
+                #another one for las files without rgb
+                xyz = read_las(data_file)
+                if args.voxel_width > 0:
+                    #an example of pruning without labels
+                    xyz, rgb, labels = libply_c.prune(xyz, args.voxel_width, rgb, np.array(1,dtype='u1'), 0)
+                    #another one without rgb information nor labels
+                    xyz = libply_c.prune(xyz, args.voxel_width, np.zeros(xyz.shape,dtype='u1'), np.array(1,dtype='u1'), 0)[0]
+                #if no labels available simply set here labels = []
+                #if no rgb available simply set here rgb = [] and make sure to not use it later on
             start = timer()
             #---compute 10 nn graph-------
             graph_nn, target_fea = compute_graph_nn_2(xyz, args.k_nn_adj, args.k_nn_geof)
