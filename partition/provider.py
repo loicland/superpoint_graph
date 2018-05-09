@@ -330,6 +330,8 @@ def write_ply(filename, xyz, rgb):
 #------------------------------------------------------------------------------
 def write_features(file_name, geof, xyz, rgb, graph_nn, labels):
     """write the geometric features, labels and clouds in a h5 file"""
+    if os.path.isfile(file_name):
+        os.remove(file_name)
     data_file = h5py.File(file_name, 'w')
     data_file.create_dataset('linearity', data=geof[:, 0], dtype='float32')
     data_file.create_dataset('planarity', data=geof[:, 1], dtype='float32')
@@ -339,7 +341,6 @@ def write_features(file_name, geof, xyz, rgb, graph_nn, labels):
     data_file.create_dataset('target', data=graph_nn["target"], dtype='uint32')
     data_file.create_dataset('distances', data=graph_nn["distances"], dtype='float32')
     data_file.create_dataset('xyz', data=xyz, dtype='float32')
-    data_file.create_dataset('rgb', data=rgb, dtype='uint8')
     if len(rgb) > 0:
         data_file.create_dataset('rgb', data=rgb, dtype='uint8')
     if len(labels) > 0 and len(labels.shape)>1 and labels.shape[1]>1:
@@ -380,6 +381,8 @@ def read_features(file_name):
 #------------------------------------------------------------------------------
 def write_spg(file_name, graph_sp, components, in_component):
     """save the partition and spg information"""
+    if os.path.isfile(file_name):
+        os.remove(file_name)
     data_file = h5py.File(file_name, 'w')
     grp = data_file.create_group('components')
     n_com = len(components)

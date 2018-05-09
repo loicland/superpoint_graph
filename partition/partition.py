@@ -27,7 +27,7 @@ parser.add_argument('--reg_strength', default=0.1, type=float, help='regularizat
 parser.add_argument('--d_se_max', default=0, type=float, help='max length of super edges')
 parser.add_argument('--voxel_width', default=0.03, type=float, help='voxel size when subsampling (in m)')
 parser.add_argument('--ver_batch', default=0, type=int, help='Batch size for reading large files, 0 do disable batch loading')
-
+parser.add_argument('--overwrite', default=0, type=int, help='Wether to read existing files or overwrite them')
 args = parser.parse_args()
 
 #path to data
@@ -112,7 +112,7 @@ for folder in folders:
         i_file = i_file + 1
         print(str(i_file) + " / " + str(n_files) + "---> "+file_name)
         #--- build the geometric feature file h5 file ---
-        if os.path.isfile(fea_file):
+        if os.path.isfile(fea_file) and not args.overwrite:
             print("    reading the existing feature file...")
             geof, xyz, rgb, graph_nn, labels = read_features(fea_file)
         else :
@@ -154,7 +154,7 @@ for folder in folders:
             write_features(fea_file, geof, xyz, rgb, graph_nn, labels)
         #--compute the partition------
         sys.stdout.flush()
-        if os.path.isfile(spg_file):
+        if os.path.isfile(spg_file) and not args.overwrite:
             print("    reading the existing superpoint graph file...")
             graph_sp, components, in_component = read_spg(spg_file)
         else:
