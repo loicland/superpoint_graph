@@ -14,7 +14,7 @@ This is the official PyTorch implementation of our paper *Large-scale Point Clou
 
 ## Requirements
 
-1. Install [PyTorch](https://pytorch.org) and [torchnet](https://github.com/pytorch/tnt) with `pip install git+https://github.com/pytorch/tnt.git@master`.
+1. Install [PyTorch](https://pytorch.org) and [torchnet](https://github.com/pytorch/tnt) with `pip install git+https://github.com/pytorch/tnt.git@master`. Pytorch 0.4 is not tested and might cause errors.
 
 2. Install additional Python packages: `pip install future python-igraph tqdm transforms3d pynvrtc fastrlock cupy h5py sklearn plyfile scipy`.
 
@@ -32,7 +32,7 @@ cd cut-pursuit/src
 cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.6m.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.6m -DBOOST_INCLUDEDIR=$CONDAENV/include -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
 make
 ```
-where `$CONDAENV` is the path to your conda environment. The code was tested on Ubuntu 14.04 with Python 3.6 and PyTorch 0.2.
+where `$CONDAENV` is the path to your conda environment. The code was tested on Ubuntu 14.04 with Python 3.6 and PyTorch 0.2 and 0.3. The newer 0.4 is not tested yet.
 
 ### Troubleshooting
 
