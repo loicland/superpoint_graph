@@ -326,6 +326,10 @@ def resume(args, dbinfo):
     """ Loads model and optimizer state from a previous checkpoint. """
     print("=> loading checkpoint '{}'".format(args.resume))
     checkpoint = torch.load(args.resume)
+    
+    checkpoint['args'].model_config = args.model_config #to ensure compatibility with previous arguments convention
+    #this should be removed once new models are uploaded
+    
     model = create_model(checkpoint['args'], dbinfo) #use original arguments, architecture can't change
     optimizer = create_optimizer(args, model)
     
