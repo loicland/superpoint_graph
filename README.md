@@ -152,6 +152,7 @@ You can apply SPG on your own data set with minimal changes:
 - adapt the template function ```/learning/custom_dataset.py``` to your achitecture and design choices
 - adapt references to ```custom_dataset``` in ```/learning/main.py```
 - add your data set colormap to ```get_color_from_label``` in ```/partition/provider.py```
+- adapt line 212 of `learning/spg.py` to reflect the missing or extra point features
 - change ```--model_config``` to ```gru_10,f_K``` with ```K``` as the number of classes in your dataset, or ```gru_10_0,f_K``` to use matrix edge filters instead of vectors (only use matrices when your data set is quite large, and with many different point clouds, like S3DIS).
 
 # Datasets without RGB
