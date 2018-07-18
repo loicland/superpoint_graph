@@ -63,7 +63,7 @@ class GraphNetwork(nn.Module):
                 self.add_module(str(d), crf)
                 self.gconvs.append(gconv)
 
-            elif conf[0]=='gru' or conf[0]=='lstm': #RNN-ECC     args: repeats, layernorm=True, ingate=True, cat_all=True, mv=False
+            elif conf[0]=='gru' or conf[0]=='lstm': #RNN-ECC     args: repeats, mv=False, layernorm=True, ingate=True, cat_all=True
                 nrepeats = int(conf[1])
                 vv = bool(int(conf[2])) if len(conf)>2 else True # whether ECC does matrix-value mult or element-wise mult
                 layernorm = bool(int(conf[3])) if len(conf)>3 else True
