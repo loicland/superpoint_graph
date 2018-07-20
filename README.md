@@ -46,6 +46,9 @@ Common sources of error and how to fix them:
 
 Download [S3DIS Dataset](http://buildingparser.stanford.edu/dataset.html) and extract `Stanford3dDataset_v1.2_Aligned_Version.zip` to `$S3DIR_DIR/data`, where `$S3DIR_DIR` is set to dataset directory.
 
+To fix some issues with the dataset as reported in issue [#29](https://github.com/loicland/superpoint_graph/issues/29), apply path `S3DIS_fix.diff` with:
+```cp S3DIS_fix.diff $S3DIR_DIR/data; cd $S3DIR_DIR/data; git apply S3DIS_fix.diff; rm S3DIS_fix.diff; cd -```
+
 ### Partition
 
 To compute the partition run
