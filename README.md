@@ -161,4 +161,4 @@ You can apply SPG on your own data set with minimal changes:
 # Datasets without RGB
 If your data does not have RGB values you can easily use SPG. You will need to follow the instructions in ```partition/partition.ply``` regarding the pruning.
 You will need to adapt the ```/learning/custom_dataset.py``` file so that it does not refer ro RGB values.
-You should absolutely not use a model pretrained on values with RGB. instead, retrain a model from scratch using the ```--pc_attribs xyzelpsv``` option to remove RGB from the shape embedding input.
+You should absolutely not use a model pretrained on values with RGB. instead, retrain a model from scratch using the ```--pc_attribs xyzelpsv``` option to remove RGB from the shape embedding input and setting the ```--pc_attribs``` option to the correct number of features (7 in case of ```--pc_attribs xyzelpsv```).
