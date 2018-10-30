@@ -41,11 +41,11 @@ elif args.dataset == 'sema3d':
     folders = ["test_reduced/", "test_full/", "train/"]
     n_labels = 8
 elif 'helix' in args.dataset.lower():
-    sys.path.append('../datasets/')
+    sys.path.append('./providers')
     from datasets import *
     helix_data = HelixDataset()
     folders = helix_data.folders
-    n_labels = helix_data.len(helix.data.labels.keys())
+    n_labels = len(helix_data.labels.keys())
 elif args.dataset == 'custom_dataset':
     folders = ["train/", "test/"]
     n_labels = 10 #number of classes
@@ -145,7 +145,8 @@ for folder in folders:
                     xyz, rgb = read_semantic3d_format(data_file, 0, '', args.voxel_width, args.ver_batch)
                     labels = []
             elif 'helix' in args.dataset.lower():
-                xyz = helix_data.read_pointcloud(data_file)
+                xyz = helix_data.read_pointcloud(data_file).astype(dtype='float32')
+                print(xyz)
                 xyz = libply_c.prune(xyz, args.voxel_width, np.zeros(xyz.shape,dtype='u1'), np.array(1,dtype='u1'), 0)[0]
                 labels = []
                 rgb = []

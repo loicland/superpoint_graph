@@ -1,10 +1,11 @@
 import open3d as o3d
+import numpy as np
 
 class HelixDataset:
 
     def __init__(self):
         self.name = "helix_v1"
-        self.folders = ["test"]
+        self.folders = ["test/"]
         self.extension = ".ply"
         self.labels = {
             'ceiling': 1,
