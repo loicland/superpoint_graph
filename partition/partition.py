@@ -146,8 +146,8 @@ for folder in folders:
                     labels = []
             elif 'helix' in args.dataset.lower():
                 xyz = helix_data.read_pointcloud(data_file).astype(dtype='float32')
-                print(xyz)
-                xyz = libply_c.prune(xyz, args.voxel_width, np.zeros(xyz.shape,dtype='u1'), np.array(1,dtype='u1'), 0)[0]
+                if args.voxel_width > 0:
+                    xyz = libply_c.prune(xyz, args.voxel_width, np.zeros(xyz.shape,dtype='u1'), np.array(1,dtype='u1'), 0)[0]
                 labels = []
                 rgb = []
             elif args.dataset=='custom_dataset':
