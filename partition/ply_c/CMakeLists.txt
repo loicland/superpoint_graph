@@ -27,9 +27,11 @@ INCLUDE_DIRECTORIES(${EIGEN3_INCLUDE_DIR})
 #SET(PYTHON_LIBRARIES /usr/lib/x86_64-linux-gnu/libpython2.7.so)
 #SET(PYTHON_INCLUDE_DIRS /usr/include/python2.7)
 find_package(PythonLibs)
+message("Include dirs are " ${PYTHON_INCLUDE_DIRS})
 message("PYTHON LIBRARIES ARE " ${PYTHON_LIBRARIES})
-INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_DIRS} ${NUMPY_INCLUDE_DIR})
 LINK_DIRECTORIES(${PYTHON_LIBRARY_DIRS})
+
 ##############################
 ###  Build target library  ###
 ##############################
