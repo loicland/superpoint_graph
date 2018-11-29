@@ -32,6 +32,7 @@ args = parser.parse_args()
 
 #path to data
 root = args.ROOT_PATH+'/'
+helix_data = None
 #list of subfolders to be processed
 if args.dataset == 's3dis':
     folders = ["Area_1/", "Area_2/", "Area_3/", "Area_4/", "Area_5/", "Area_6/"]
@@ -39,6 +40,12 @@ if args.dataset == 's3dis':
 elif args.dataset == 'sema3d':
     folders = ["test_reduced/", "test_full/", "train/"]
     n_labels = 8
+elif 'helix' in args.dataset.lower():
+    sys.path.append('./providers')
+    from datasets import *
+    helix_data = HelixDataset()
+    folders = helix_data.folders
+    n_labels = len(helix_data.labels.keys())
 elif args.dataset == 'custom_dataset':
     folders = ["train/", "test/"]
     n_labels = 10 #number of classes
@@ -76,6 +83,8 @@ for folder in folders:
                 if os.path.isdir(os.path.join(data_folder,o))]
     elif args.dataset=='sema3d':
         files = glob.glob(data_folder+"*.txt")
+    elif 'helix' in args.dataset.lower():
+        files = glob.glob(os.path.join(data_folder,'*'+helix_data.extension))
     elif args.dataset=='custom_dataset':
         #list all ply files in the folder
         files = glob.glob(data_folder+"*.ply")
@@ -102,6 +111,11 @@ for folder in folders:
             cloud_file = cloud_folder+ file_name_short
             fea_file   = fea_folder  + file_name_short + '.h5'
             spg_file   = spg_folder  + file_name_short + '.h5'
+        elif 'helix' in args.dataset.lower():
+            data_file   = data_folder      + file_name + helix_data.extension
+            cloud_file  = cloud_folder     + file_name
+            fea_file    = fea_folder       + file_name + '.h5'
+            spg_file    = spg_folder       + file_name + '.h5'
         elif args.dataset=='custom_dataset':
             #adapt to your hierarchy. The following 4 files must be defined
             data_file   = data_folder      + file_name + '.ply' #or .las
@@ -130,6 +144,12 @@ for folder in folders:
                 else:
                     xyz, rgb = read_semantic3d_format(data_file, 0, '', args.voxel_width, args.ver_batch)
                     labels = []
+            elif 'helix' in args.dataset.lower():
+                xyz = helix_data.read_pointcloud(data_file).astype(dtype='float32')
+                if args.voxel_width > 0:
+                    xyz = libply_c.prune(xyz, args.voxel_width, np.zeros(xyz.shape,dtype='u1'), np.array(1,dtype='u1'), 0)[0]
+                labels = []
+                rgb = []
             elif args.dataset=='custom_dataset':
                 #implement in provider.py your own read_custom_format outputing xyz, rgb, labels
                 #example for ply files
@@ -167,6 +187,9 @@ for folder in folders:
             elif args.dataset=='sema3d':
                  features = geof
                  geof[:,3] = 2. * geof[:, 3]
+            elif 'helix' in args.dataset.lower():
+                features = geof
+                geof[:,3] = 2. * geof[:, 3]
             elif args.dataset=='custom_dataset':
                 #choose here which features to use for the partition
                  features = geof

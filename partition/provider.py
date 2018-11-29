@@ -324,7 +324,10 @@ def write_ply(filename, xyz, rgb):
     for i_prop in range(0, 3):
         vertex_all[prop[i_prop][0]] = xyz[:, i_prop]
     for i_prop in range(0, 3):
-        vertex_all[prop[i_prop+3][0]] = rgb[:, i_prop]
+        if (len(rgb)) >0 : 
+            vertex_all[prop[i_prop+3][0]] = rgb[:, i_prop]
+        else:
+            vertex_all[prop[i_prop+3][0]] = 0
     ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
     ply.write(filename)
 #------------------------------------------------------------------------------
@@ -368,7 +371,10 @@ def read_features(file_name):
     geof[:, 2] = data_file["scattering"]
     geof[:, 3] = data_file["verticality"]
     xyz = data_file["xyz"][:]
-    rgb = data_file["rgb"][:]
+    try:
+        rgb = data_file["rgb"][:]
+    except KeyError as e:
+        rgb = []
     source = data_file["source"][:]
     target = data_file["target"][:]
     distances = data_file["distances"][:]
