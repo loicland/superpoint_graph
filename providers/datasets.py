@@ -60,10 +60,17 @@ class HelixDataset:
             for fname in sorted(os.listdir(path)):
                 if fname.endswith(".h5"):
                     testlist.append(spg.spg_reader(args, path + fname, True))
+           
+        # Load training data for normalisation purposes mainly
+        for n in range(2,7):
+            path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, n)
+            for fname in sorted(os.listdir(path)):
+                if fname.endswith(".h5"):
+                    trainlist.append(spg.spg_reader(args, path + fname, True))
 
-        # Normalize edge features, for now train and test are the same, we do not have any label
+        # Normalize edge features
         if args.spg_attribs01:
-            trainlist, testlist = spg.scaler01(testlist, testlist)
+            trainlist, testlist = spg.scaler01(trainlist, testlist)
 
         return tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in trainlist],
                                         functools.partial(spg.loader, train=True, args=args, db_path=args.ROOT_PATH)), \

@@ -26,6 +26,7 @@ import pointnet
 import metrics
 import provider
 import s3dis_dataset
+import custom_dataset
 
 
 # ## Import model and load weights
@@ -36,7 +37,7 @@ import s3dis_dataset
 MODEL_PATH = 'results/s3dis/bw/cv1/model.pth.tar'
 model_config = 'gru_10_0,f_13'
 edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d'
-pc_attribs = 'xyzelpsvXYZ'
+pc_attribs = 'xyzelspvXYZ'
 dbinfo = HelixDataset().get_info(edge_attribs,pc_attribs)
 
 
@@ -86,7 +87,7 @@ a = model.eval()
 
 # ## Evaluate on a dataset
 
-# In[7]:
+# In[13]:
 
 
 data_to_test = 'helix'
@@ -95,24 +96,27 @@ if data_to_test == 's3dis':
     create_dataset = s3dis_dataset.get_datasets
 elif data_to_test == 'helix':
     args.ROOT_PATH = 'data/helix'
+    args.S3DIS_PATH = 'data/S3DIS'
     HelixDataset().preprocess_pointclouds(args.ROOT_PATH)
     create_dataset = HelixDataset().get_datasets
+if data_to_test == 'custom':
+    args.ROOT_PATH = 'data/helix2'
+    create_dataset = custom_dataset.get_datasets
 
 
-# In[8]:
+# In[14]:
 
 
 collected, predictions = defaultdict(list), {}
 for ss in range(args.test_multisamp_n):
     eval_data = create_dataset(args,ss)[1]
-    loader = torch.utils.data.DataLoader(eval_data, batch_size=1, collate_fn=spg.eccpc_collate, num_workers=8)
+    loader = torch.utils.data.DataLoader(eval_data, batch_size=1, collate_fn=spg.eccpc_collate, num_workers=5)
     for bidx, (targets, GIs, clouds_data) in enumerate(loader):
         model.ecc.set_info(GIs, args.cuda)
         label_mode_cpu, label_vec_cpu, segm_size_cpu = targets[:,0], targets[:,2:], targets[:,1:].sum(1).float()
-
+        data = clouds_data
         embeddings = cloud_embedder.run(model, *clouds_data)
         outputs = model.ecc(embeddings)
-
         fname = clouds_data[0][0][:clouds_data[0][0].rfind('.')]
         collected[fname].append((outputs.data.cpu().numpy(), label_mode_cpu.numpy(), label_vec_cpu.numpy()))
 
@@ -129,7 +133,13 @@ with h5py.File(os.path.join(args.ROOT_PATH, 'predictions.h5'), 'w') as hf:
 # In[9]:
 
 
-predictions['test/room_1900']
+predictions['Area_1/conferenceRoom_1'][0:100]
+
+
+# In[15]:
+
+
+predictions['test/s3disconferenceRoom_1'][0:100]
 
 
 # ## Visualisation
@@ -142,10 +152,10 @@ predictions['test/room_1900']
 # * e = error
 # * s = SPG
 
-# In[13]:
+# In[ ]:
 
 
-visualise(args.ROOT_PATH,'iprsf','test/room_1900',os.path.join(args.ROOT_PATH,'predictions.h5'))
+visualise(args.ROOT_PATH,'r','test/s3disconferenceRoom_1',os.path.join(args.ROOT_PATH,'predictions.h5'))
 
 
 # In[11]:
@@ -239,18 +249,4 @@ def visualise(root_path, output_type,filename,prediction_file):
 #         pred_up = interpolate_labels(xyz_up, xyz, pred_full, args.ver_batch)
 #         print("writing the upsampled prediction file...")
 #         prediction2ply(ply_file + "_pred_up.ply", xyz_up, pred_up+1, n_labels, args.dataset)
-
-
-# In[2]:
-
-
-cloud = o3d.read_point_cloud('data/helix/clouds/test/small_pred.ply')
-
-
-# In[3]:
-
-
-visualizer = o3d.JVisualizer()
-visualizer.add_geometry(cloud)
-visualizer.show()
 
