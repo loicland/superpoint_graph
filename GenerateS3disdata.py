@@ -45,7 +45,7 @@ with open(outfile,'w') as fp:
         fp.write('%.3f %.3f %.3f %d %d %d\n' % tuple(row))
 
 
-# ## Now doing the reverse
+# ## Now doing the reverse: s3dis -> ply
 
 # In[11]:
 
@@ -57,7 +57,6 @@ outfile = 'data/helix/data/test/s3disconferenceRoom_1.ply'
 # In[6]:
 
 
-format_str = '%.3f %.3f %.3f %d %d %d\n'
 pts = []
 with open(infile,'r') as fp:
     lines = fp.readlines()

@@ -62,11 +62,12 @@ class HelixDataset:
                     testlist.append(spg.spg_reader(args, path + fname, True))
            
         # Load training data for normalisation purposes mainly
-        for n in range(2,7):
-            path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, n)
-            for fname in sorted(os.listdir(path)):
-                if fname.endswith(".h5"):
-                    trainlist.append(spg.spg_reader(args, path + fname, True))
+        for n in range(1,7):
+            if n != args.cvfold:
+                path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, n)
+                for fname in sorted(os.listdir(path)):
+                    if fname.endswith(".h5"):
+                        trainlist.append(spg.spg_reader(args, path + fname, True))
 
         # Normalize edge features
         if args.spg_attribs01:
@@ -81,7 +82,7 @@ class HelixDataset:
         cloud = o3d.read_point_cloud(filename)
         # Align x,y,z with  origin
         pts = np.asarray(cloud.points)
-        pts = pts - np.min(pts,axis=0,keepdims=True)
+        pts = pts  - np.min(pts,axis=0,keepdims=True) 
         return pts
     
     def preprocess_pointclouds(self,ROOT_PATH):

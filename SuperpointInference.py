@@ -87,7 +87,7 @@ a = model.eval()
 
 # ## Evaluate on a dataset
 
-# In[13]:
+# In[23]:
 
 
 data_to_test = 'helix'
@@ -99,35 +99,47 @@ elif data_to_test == 'helix':
     args.S3DIS_PATH = 'data/S3DIS'
     HelixDataset().preprocess_pointclouds(args.ROOT_PATH)
     create_dataset = HelixDataset().get_datasets
-if data_to_test == 'custom':
-    args.ROOT_PATH = 'data/helix2'
-    create_dataset = custom_dataset.get_datasets
 
 
-# In[14]:
+# In[24]:
 
 
-collected, predictions = defaultdict(list), {}
-for ss in range(args.test_multisamp_n):
-    eval_data = create_dataset(args,ss)[1]
-    loader = torch.utils.data.DataLoader(eval_data, batch_size=1, collate_fn=spg.eccpc_collate, num_workers=5)
-    for bidx, (targets, GIs, clouds_data) in enumerate(loader):
-        model.ecc.set_info(GIs, args.cuda)
-        label_mode_cpu, label_vec_cpu, segm_size_cpu = targets[:,0], targets[:,2:], targets[:,1:].sum(1).float()
-        data = clouds_data
-        embeddings = cloud_embedder.run(model, *clouds_data)
-        outputs = model.ecc(embeddings)
-        fname = clouds_data[0][0][:clouds_data[0][0].rfind('.')]
-        collected[fname].append((outputs.data.cpu().numpy(), label_mode_cpu.numpy(), label_vec_cpu.numpy()))
+def predict(args,create_dataset):
+    collected = defaultdict(list)
+    for ss in range(args.test_multisamp_n):
+        eval_data = create_dataset(args,ss)[1]
+        loader = torch.utils.data.DataLoader(eval_data, batch_size=1, collate_fn=spg.eccpc_collate, num_workers=8)
+        for bidx, (targets, GIs, clouds_data) in enumerate(loader):
+            model.ecc.set_info(GIs, args.cuda)
+            label_mode_cpu, label_vec_cpu, segm_size_cpu = targets[:,0], targets[:,2:], targets[:,1:].sum(1).float()
+            data = clouds_data
+            embeddings = cloud_embedder.run(model, *clouds_data)
+            outputs = model.ecc(embeddings)
+            fname = clouds_data[0][0][:clouds_data[0][0].rfind('.')]
+            collected[fname].append((outputs.data.cpu().numpy(), label_mode_cpu.numpy(), label_vec_cpu.numpy()))
 
 
-with h5py.File(os.path.join(args.ROOT_PATH, 'predictions.h5'), 'w') as hf:
-    for fname,output in collected.items():
-        o_cpu, t_cpu, tvec_cpu = list(zip(*output))
-        o_cpu = np.mean(np.stack(o_cpu,0),0)
-        prediction = np.argmax(o_cpu,axis=-1)
-        predictions[fname] = prediction
-        hf.create_dataset(name=fname, data=prediction) #(0-based classes)
+    predictions = {}
+    with h5py.File(os.path.join(args.ROOT_PATH, 'predictions.h5'), 'w') as hf:
+        for fname,output in collected.items():
+            o_cpu, t_cpu, tvec_cpu = list(zip(*output))
+            o_cpu = np.mean(np.stack(o_cpu,0),0)
+            prediction = np.argmax(o_cpu,axis=-1)
+            predictions[fname] = prediction
+            hf.create_dataset(name=fname, data=prediction) #(0-based classes)
+    return predictions
+
+
+# In[25]:
+
+
+predictions = predict(args,create_dataset)
+
+
+# In[11]:
+
+
+predictions['test/s3disconferenceRoom_1'][0:100]
 
 
 # In[9]:
@@ -136,7 +148,7 @@ with h5py.File(os.path.join(args.ROOT_PATH, 'predictions.h5'), 'w') as hf:
 predictions['Area_1/conferenceRoom_1'][0:100]
 
 
-# In[15]:
+# In[21]:
 
 
 predictions['test/s3disconferenceRoom_1'][0:100]
@@ -152,13 +164,13 @@ predictions['test/s3disconferenceRoom_1'][0:100]
 # * e = error
 # * s = SPG
 
-# In[17]:
+# In[27]:
 
 
-visualise(args.ROOT_PATH,'r','test/s3disconferenceRoom_1',os.path.join(args.ROOT_PATH,'predictions.h5'))
+visualise(args.ROOT_PATH,'r','test/room_1900',os.path.join(args.ROOT_PATH,'predictions.h5'))
 
 
-# In[11]:
+# In[13]:
 
 
 def visualise(root_path, output_type,filename,prediction_file):
