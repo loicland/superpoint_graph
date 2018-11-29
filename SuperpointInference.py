@@ -152,7 +152,7 @@ predictions['test/s3disconferenceRoom_1'][0:100]
 # * e = error
 # * s = SPG
 
-# In[ ]:
+# In[17]:
 
 
 visualise(args.ROOT_PATH,'r','test/s3disconferenceRoom_1',os.path.join(args.ROOT_PATH,'predictions.h5'))
