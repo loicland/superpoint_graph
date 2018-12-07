@@ -1,0 +1,24 @@
+name: superpoint
+dependencies:
+  - python=3.6
+  - ipykernel
+  - numpy
+  - boost
+  - future 
+  - python-igraph 
+  - tqdm
+  - fastrlock
+  - cupy
+  - h5py 
+  - scikit-learn
+  - scipy
+  - pytorch:torchvision
+  - pytorch:pytorch
+  - omnia:eigen3
+  - eigen
+  - libiconv
+  - pip:
+    - transforms3d
+    - plyfile
+    - pynvrtc
+    - "--editable=git+https://github.com/pytorch/tnt.git@master#egg=tnt"
