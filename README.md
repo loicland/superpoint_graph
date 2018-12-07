@@ -162,3 +162,67 @@ You can apply SPG on your own data set with minimal changes:
 If your data does not have RGB values you can easily use SPG. You will need to follow the instructions in ```partition/partition.ply``` regarding the pruning.
 You will need to adapt the ```/learning/custom_dataset.py``` file so that it does not refer ro RGB values.
 You should absolutely not use a model pretrained on values with RGB. instead, retrain a model from scratch using the ```--pc_attribs xyzelpsv``` option to remove RGB from the shape embedding input and setting the ```--pc_attribs``` option to the correct number of features (7 in case of ```--pc_attribs xyzelpsv```).
+
+
+## HELIX
+Getting the S3DIS dataset (fixed dataset, no need to apply the diff)
+
+https://storage.googleapis.com/helix-dev-jupyterhub-data/point-clouds/S3DIS-dataset/Stanford3dDataset_v1.3_Aligned_Version.tar.gz
+
+
+Your folder structure should look like (once you have added some custom helix data as well):
+```
+data
+|-- S3DIS
+    |-- clouds
+    |-- data
+        |-- Area_1
+        |-- Area_2
+        |-- Area_3
+        |-- Area_4
+        |-- Area_5
+        |-- Area_6
+    |-- features
+    |-- parsed
+    |-- superpoint_graphs
+|-- helix
+    |-- clouds
+    |-- data
+        |-- test
+    |-- features
+    |-- parsed
+    |-- superpoint_graphs
+learning
+partition
+results
+```
+
+### Running inference
+For every point cloud, the steps from raw data to segmented cloud are as follow:
+
+1. superpoint_point segmentation, for S3DIS run:
+    ```
+    python partition/partition.py --dataset s3dis --ROOT_PATH data/S3DIS --voxel_width 0.03 --reg_strength 0.03
+    ```
+2. parse super_points, for S3DIS:
+    ```
+    python learning/s3dis_dataset.py --S3DIS_PATH data/S3DIS
+    ```
+3. predict using a pretrained model, use the notebook provided for that purpose, it contains a visualisation function that writes `ply` files to the `clouds` sub-folder. `ply` files can be viewed with MeshLab for example
+
+### Running on non rgb clouds
+Add `.ply` rgb clouds to the `data/helix/data/test` folder and segment them:
+```
+python partition/partition.py --dataset helix --ROOT_PATH data/helix --voxel_width 0.03 --reg_strength 0.03
+```
+and then simply follow the steps in the inference notebook. A model trained on non rgb data can be found there:
+
+https://storage.googleapis.com/helix-dev-jupyterhub-data/deep-learning/models/superpoint_graph/norgb/model.pth.tar
+
+It was generated with the following comamnd:
+```
+learning/main.py --dataset 's3dis' --S3DIS_PATH 'data/S3DIS' --cvfold '1' --epochs '350' --lr_steps '[275,320]' --test_nth_epoch '50' --model_config 'gru_10_0,f_13' --ptn_nfeat_stn '11' --pc_attribs 'xyzelpsvXYZ' --nworkers '8' --odir 'results/s3dis/bw/cv1'
+```
+
+### Some more testing data
+https://console.cloud.google.com/storage/browser/helix-dev-jupyterhub-data/point-clouds/sample-rooms/?project=helix-dev-195819
