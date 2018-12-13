@@ -13,7 +13,7 @@
 
 # ### 1.1.Import
 
-# In[70]:
+# In[1]:
 
 
 import os.path
@@ -34,7 +34,7 @@ from datasets import *
 
 # ### 1.2.Partitionning 
 
-# In[90]:
+# In[2]:
 
 
 def _partition(path_to_pcl, k_nn_geof = 45, k_nn_adj = 10, lambda_edge_weight = 1., reg_strength = 0.03, d_se_max = 0, voxel_width = 0.03, ver_batch = 0, overwrite = 0 ):
@@ -142,18 +142,19 @@ def _partition(path_to_pcl, k_nn_geof = 45, k_nn_adj = 10, lambda_edge_weight = 
 
         print("Timer : %5.1f / %5.1f / %5.1f " % (times[0], times[1], times[2]))
         print("=================\n   "+ 'Ended Partitioning {}'.format(file)+"\n=================")
-        return
+        return root[:-1], folder + file_name
 
 
-# In[93]:
+# In[3]:
 
 
-_partition('data/TEST/data/test/room_1900.ply')
+root, file = _partition('data/TEST/data/test/room_1900.ply')
 
 
-# In[94]:
+# In[4]:
 
 
+# normal if it fails
 _partition('data/TEST/data/test/room_19065.ply')
 
 
@@ -161,7 +162,7 @@ _partition('data/TEST/data/test/room_19065.ply')
 
 # ### 2.1.Import
 
-# In[95]:
+# In[5]:
 
 
 import torch
@@ -188,17 +189,7 @@ import custom_dataset
 
 # ### 2.2.Loading model and Weights
 
-# In[96]:
-
-
-MODEL_PATH = 'results/s3dis/bw/cv1/model.pth.tar'
-model_config = 'gru_10_0,f_13'
-edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d'
-pc_attribs = 'xyzelspvXYZ'
-dbinfo = HelixDataset().get_info(edge_attribs,pc_attribs)
-
-
-# In[97]:
+# In[7]:
 
 
 def load_weights(model_path,model_config,db_info):
@@ -212,7 +203,7 @@ def load_weights(model_path,model_config,db_info):
     return model, cloud_embedder, checkpoint['args']
 
 
-# In[98]:
+# In[8]:
 
 
 def create_model(args, dbinfo):
@@ -230,12 +221,28 @@ def create_model(args, dbinfo):
     return model 
 
 
+# In[9]:
+
+
+MODEL_PATH = 'results/s3dis/bw/cv1/model.pth.tar'
+model_config = 'gru_10_0,f_13'
+edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d'
+pc_attribs = 'xyzelspvXYZ'
+dbinfo = HelixDataset().get_info(edge_attribs,pc_attribs)
+
+model,cloud_embedder, args = load_weights(MODEL_PATH,model_config,dbinfo)
+
+
 # ### 2.3.Run Inferences
 
-# In[ ]:
+# In[12]:
 
 
-def predict(args,create_dataset):
+def predict(args, root):
+    args.ROOT_PATH = root
+    HelixDataset().preprocess_pointclouds(args.ROOT_PATH)
+    create_dataset = HelixDataset().get_datasets
+
     collected = defaultdict(list)
     for ss in range(args.test_multisamp_n):
         eval_data = create_dataset(args,ss)[1]
@@ -248,8 +255,6 @@ def predict(args,create_dataset):
             outputs = model.ecc(embeddings)
             fname = clouds_data[0][0][:clouds_data[0][0].rfind('.')]
             collected[fname].append((outputs.data.cpu().numpy(), label_mode_cpu.numpy(), label_vec_cpu.numpy()))
-
-
     predictions = {}
     with h5py.File(os.path.join(args.ROOT_PATH, 'predictions.h5'), 'w') as hf:
         for fname,output in collected.items():
@@ -261,47 +266,93 @@ def predict(args,create_dataset):
     return predictions
 
 
-# In[ ]:
+# In[13]:
 
 
-def predict(args,create_dataset):
-    collected = defaultdict(list)
-    for ss in range(args.test_multisamp_n):
-        eval_data = create_dataset(args,ss)[1]
-        loader = torch.utils.data.DataLoader(eval_data, batch_size=1, collate_fn=spg.eccpc_collate, num_workers=8)
-        for bidx, (targets, GIs, clouds_data) in enumerate(loader):
-            model.ecc.set_info(GIs, args.cuda)
-            label_mode_cpu, label_vec_cpu, segm_size_cpu = targets[:,0], targets[:,2:], targets[:,1:].sum(1).float()
-            data = clouds_data
-            embeddings = cloud_embedder.run(model, *clouds_data)
-            outputs = model.ecc(embeddings)
-            fname = clouds_data[0][0][:clouds_data[0][0].rfind('.')]
-            collected[fname].append((outputs.data.cpu().numpy(), label_mode_cpu.numpy(), label_vec_cpu.numpy()))
-
-
-    predictions = {}
-    with h5py.File(os.path.join(args.ROOT_PATH, 'predictions.h5'), 'w') as hf:
-        for fname,output in collected.items():
-            o_cpu, t_cpu, tvec_cpu = list(zip(*output))
-            o_cpu = np.mean(np.stack(o_cpu,0),0)
-            prediction = np.argmax(o_cpu,axis=-1)
-            predictions[fname] = prediction
-            hf.create_dataset(name=fname, data=prediction) #(0-based classes)
-    return predictions
-
-
-# In[ ]:
-
-
-predictions = predict(args,create_dataset)
+predictions = predict(args, root)
 
 
 # ### 2.4.Outputs Segmented Point Cloud
 
+# In[15]:
+
+
+def visualise(root_path, filename, predictions):
+    n_labels = 13
+    
+    folder = os.path.split(filename)[0] + '/'
+    file_name = os.path.split(filename)[1]
+    
+    #---load the values------------------------------------------------------------
+    fea_file   = os.path.join(root_path,'features',folder,file_name + '.h5')
+    spg_file   = os.path.join(root_path,'superpoint_graphs',folder,file_name + '.h5')
+    ply_folder = os.path.join(root_path,'clouds',folder)
+    ply_file   = os.path.join(ply_folder,file_name)
+
+    if not os.path.isdir(ply_folder ):
+        os.mkdir(ply_folder)
+    if (not os.path.isfile(fea_file)) :
+        raise ValueError("%s does not exist and is needed" % fea_file)
+    
+    geof, xyz, rgb, graph_nn, labels = provider.read_features(fea_file)
+
+    if not os.path.isfile(spg_file):    
+        raise ValueError("%s does not exist and is needed to output the partition  or result ply" % spg_file) 
+    else:
+        graph_spg, components, in_component = provider.read_spg(spg_file)
+        
+    pred_red  = predictions[filename]        
+    if (len(pred_red) != len(components)):
+        raise ValueError("It looks like the spg is not adapted to the result file") 
+    pred_full = provider.reduced_labels2full(pred_red, components, len(xyz))
+    
+    print("writing the prediction file...")
+    provider.prediction2ply(ply_file + "_pred.ply", xyz, pred_full+1, n_labels,  args.dataset)
+
+
+# In[16]:
+
+
+visualise(root, file, predictions)
+
+
 # # **Regrouping in a Class**
 
-# In[ ]:
+# In[1]:
 
+
+import os.path
+import sys
+import numpy as np
+from timeit import default_timer as timer
+sys.path.append('partition/cut-pursuit/src')
+sys.path.append('partition/ply_c')
+sys.path.append('partition')
+import libcp
+import libply_c
+from graphs import *
+from provider import *
+sys.path.append('./providers')
+from datasets import *
+
+import torch
+import torch.nn as nn
+from providers.datasets import HelixDataset
+from collections import defaultdict
+import h5py
+import os
+from plyfile import PlyData, PlyElement
+import open3d as o3d
+
+sys.path.append('learning')
+sys.path.append('partition')
+import spg
+import graphnet
+import pointnet
+import metrics
+import provider
+import s3dis_dataset
+import custom_dataset
 
 class PointCloudSegmentation(object):
     """
@@ -309,11 +360,41 @@ class PointCloudSegmentation(object):
     """
     
     def __init__(self, MODEL_PATH, model_config, edge_attribs, pc_attribs):
-        self._MODEL_PATH = MODEL_PATH
+        self._model_path = MODEL_PATH
         self._model_config = model_config
         self._edge_attribs = edge_attribs
         self._pc_attribs = pc_attribs
         self._dbinfo = HelixDataset().get_info(edge_attribs,pc_attribs)
+        self._model = None
+        self._cloud_embedder = None
+        self._args = None
+        
+    
+    def process(self, input_pcl, visualize = True):
+        """ take a raw point cloud as input and output a segmented point cloud in a .ply file"""
+        root, file = self._partition(input_pcl)
+        print("=================\n   "+ 'Running Inferences' +"\n=================")
+        predictions = self._predict(root)
+        print("=================\n   "+ 'Outputing Segmented Point Cloud' +"\n=================")
+        if visualize :
+            self._visualise(root, file , predictions)
+        return predictions
+    
+    
+    def load_model(self):
+        """ load the weiths of the model """
+        print("=================\n   "+ 'Preparing Model' +"\n=================")
+        print("=> loading checkpoint '{}'".format(self._model_path))
+        checkpoint = torch.load(self._model_path)
+
+        checkpoint['args'].model_config = self._model_config 
+        cloud_embedder = pointnet.CloudEmbedder(checkpoint['args'])
+        model = self._create_model(checkpoint['args'], self._dbinfo) #use original arguments, architecture can't change    
+        model.load_state_dict(checkpoint['state_dict'])
+        self._model = model
+        self._cloud_embedder = cloud_embedder
+        self._args = checkpoint['args']
+        return 
         
         
     def _create_model(self, args, dbinfo):
@@ -328,19 +409,7 @@ class PointCloudSegmentation(object):
         return model 
     
     
-    def _load_model(self):
-        """ load the weiths of the model """
-        print("=> loading checkpoint '{}'".format(self._model_path))
-        checkpoint = torch.load(self._model_path)
-
-        checkpoint['args'].model_config = self._model_config 
-        cloud_embedder = pointnet.CloudEmbedder(checkpoint['args'])
-        model = _create_model(checkpoint['args'], self._dbinfo) #use original arguments, architecture can't change    
-        model.load_state_dict(checkpoint['state_dict'])
-        return model, cloud_embedder, checkpoint['args']
-    
-    
-    def _partition(path_to_pcl, k_nn_geof = 45, k_nn_adj = 10, lambda_edge_weight = 1., reg_strength = 0.03, d_se_max = 0, voxel_width = 0.03, ver_batch = 0, overwrite = 0 ):
+    def _partition(self, path_to_pcl, k_nn_geof = 45, k_nn_adj = 10, lambda_edge_weight = 1., reg_strength = 0.03, d_se_max = 0, voxel_width = 0.03, ver_batch = 0, overwrite = 0 ):
             """ Large-scale Point Cloud Segmentation with Superpoint Graphs
             Input : - path_to_pcl : path to the raw point cloud .ply file.
                     - k_nn_geof : number of neighbors for the geometric features, type=int
@@ -443,28 +512,101 @@ class PointCloudSegmentation(object):
                 times[2] = times[2] + end - start
                 write_spg(spg_file, graph_sp, components, in_component)
             print("Timer : %5.1f / %5.1f / %5.1f " % (times[0], times[1], times[2]))
-            print("=================\n   "+ 'Ended Partitioning {}'.format(file)+"\n=================")
-            return
+            return root[:-1], folder + file_name
     
-    def _predict(self, arg, part_pcl):
-        """ run Inferences on the partitioned point cloud """
-        return predictions
-        
+    def _predict(self, root):
+        self._args.ROOT_PATH = root
+        HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH)
+        create_dataset = HelixDataset().get_datasets
+
+        collected = defaultdict(list)
+        for ss in range(self._args.test_multisamp_n):
+            eval_data = create_dataset(self._args,ss)[1]
+            loader = torch.utils.data.DataLoader(eval_data, batch_size=1, collate_fn=spg.eccpc_collate, num_workers=8)
+            for bidx, (targets, GIs, clouds_data) in enumerate(loader):
+                self._model.ecc.set_info(GIs, self._args.cuda)
+                label_mode_cpu, label_vec_cpu, segm_size_cpu = targets[:,0], targets[:,2:], targets[:,1:].sum(1).float()
+                data = clouds_data
+                embeddings = self._cloud_embedder.run(self._model, *clouds_data)
+                outputs = self._model.ecc(embeddings)
+                fname = clouds_data[0][0][:clouds_data[0][0].rfind('.')]
+                collected[fname].append((outputs.data.cpu().numpy(), label_mode_cpu.numpy(), label_vec_cpu.numpy()))
+        predictions = {}
+        with h5py.File(os.path.join(self._args.ROOT_PATH, 'predictions.h5'), 'w') as hf:
+            for fname,output in collected.items():
+                o_cpu, t_cpu, tvec_cpu = list(zip(*output))
+                o_cpu = np.mean(np.stack(o_cpu,0),0)
+                prediction = np.argmax(o_cpu,axis=-1)
+                predictions[fname] = prediction
+                hf.create_dataset(name=fname, data=prediction) #(0-based classes)
+        return predictions  
     
     
-    def _visualize(self, predictions, output_filename):
-        """ output the results in a output_filenale.ply file """
-    
-    
-    
-    def process(self, input_pcl, output_filename):
-        """ take a raw point cloud as input and output a segmented point cloud in a output_filename.ply file"""
-        model,cloud_embedder, args = _load_model()
-        part_pcl = _partition(input_pcl)
-        predictions = _predict(args,part_pcl)
-        _visualize(predictions, output_filename)
-        return predictions
+    def _visualise(self, root_path, filename,predictions):
+        n_labels = 13
+
+        folder = os.path.split(filename)[0] + '/'
+        file_name = os.path.split(filename)[1]
+
+        #---load the values------------------------------------------------------------
+        fea_file   = os.path.join(root_path,'features',folder,file_name + '.h5')
+        spg_file   = os.path.join(root_path,'superpoint_graphs',folder,file_name + '.h5')
+        ply_folder = os.path.join(root_path,'clouds',folder)
+        ply_file   = os.path.join(ply_folder,file_name)
+
+        if not os.path.isdir(ply_folder ):
+            os.mkdir(ply_folder)
+        if (not os.path.isfile(fea_file)) :
+            raise ValueError("%s does not exist and is needed" % fea_file)
+
+        geof, xyz, rgb, graph_nn, labels = provider.read_features(fea_file)
+
+        if not os.path.isfile(spg_file):    
+            raise ValueError("%s does not exist and is needed to output the partition  or result ply" % spg_file) 
+        else:
+            graph_spg, components, in_component = provider.read_spg(spg_file)
+
+        pred_red  = predictions[filename]        
+        if (len(pred_red) != len(components)):
+            raise ValueError("It looks like the spg is not adapted to the result file") 
+        pred_full = provider.reduced_labels2full(pred_red, components, len(xyz))
+
+        print("writing the prediction file...")
+        provider.prediction2ply(ply_file + "_pred.ply", xyz, pred_full+1, n_labels,  self._args.dataset)
     
 
 
 # # **How to use the Class**
+
+# ## Initialize the model
+
+# In[2]:
+
+
+MODEL_PATH = 'results/s3dis/bw/cv1/model.pth.tar'
+model_config = 'gru_10_0,f_13'
+edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d'
+pc_attribs = 'xyzelspvXYZ'
+
+
+# In[3]:
+
+
+model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs)
+
+
+# ## Load the Weights
+
+# In[4]:
+
+
+model.load_model()
+
+
+# ## Segment the Point Cloud
+
+# In[5]:
+
+
+predictions = model.process('data/TEST/data/test/99DuxtonRd.ply', visualize = True ) #set visualize to True if you want to write out the segmented point cloud.
+
