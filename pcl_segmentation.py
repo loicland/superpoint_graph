@@ -11,15 +11,12 @@
 
 # This subsubsection adapt the code used in partition/parition.py.
 
-# ### 1.1.Import
-
-# In[1]:
+# In[ ]:
 
 
 import os.path
 import sys
 import numpy as np
-import argparse
 from timeit import default_timer as timer
 sys.path.append('partition/cut-pursuit/src')
 sys.path.append('partition/ply_c')
@@ -30,6 +27,25 @@ from graphs import *
 from provider import *
 sys.path.append('./providers')
 from datasets import *
+
+import torch
+import torch.nn as nn
+from providers.datasets import HelixDataset
+from collections import defaultdict
+import h5py
+import os
+from plyfile import PlyData, PlyElement
+import open3d as o3d
+
+sys.path.append('learning')
+sys.path.append('partition')
+import spg
+import graphnet
+import pointnet
+import metrics
+import provider
+import s3dis_dataset
+import custom_dataset
 
 
 # ### 1.2.Partitionning 
@@ -321,39 +337,6 @@ def visualise(root_path, filename, predictions):
 
 # In[3]:
 
-
-import os.path
-import sys
-import numpy as np
-from timeit import default_timer as timer
-sys.path.append('partition/cut-pursuit/src')
-sys.path.append('partition/ply_c')
-sys.path.append('partition')
-import libcp
-import libply_c
-from graphs import *
-from provider import *
-sys.path.append('./providers')
-from datasets import *
-
-import torch
-import torch.nn as nn
-from providers.datasets import HelixDataset
-from collections import defaultdict
-import h5py
-import os
-from plyfile import PlyData, PlyElement
-import open3d as o3d
-
-sys.path.append('learning')
-sys.path.append('partition')
-import spg
-import graphnet
-import pointnet
-import metrics
-import provider
-import s3dis_dataset
-import custom_dataset
 
 class PointCloudSegmentation(object):
     """
