@@ -148,14 +148,14 @@ def _partition(path_to_pcl, k_nn_geof = 45, k_nn_adj = 10, lambda_edge_weight = 
 # In[3]:
 
 
-root, file = _partition('data/TEST/data/test/room_1900.ply')
+#root, file = _partition('data/TEST/data/test/room_1900.ply')
 
 
 # In[4]:
 
 
 # normal if it fails
-_partition('data/TEST/data/test/room_19065.ply')
+#_partition('data/TEST/data/test/room_19065.ply')
 
 
 # ## ***2.Embedding Semantic Informations***
@@ -224,13 +224,14 @@ def create_model(args, dbinfo):
 # In[9]:
 
 
+"""
 MODEL_PATH = 'results/s3dis/bw/cv1/model.pth.tar'
 model_config = 'gru_10_0,f_13'
 edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d'
 pc_attribs = 'xyzelspvXYZ'
 dbinfo = HelixDataset().get_info(edge_attribs,pc_attribs)
-
-model,cloud_embedder, args = load_weights(MODEL_PATH,model_config,dbinfo)
+"""
+#model,cloud_embedder, args = load_weights(MODEL_PATH,model_config,dbinfo)
 
 
 # ### 2.3.Run Inferences
@@ -269,7 +270,7 @@ def predict(args, root):
 # In[13]:
 
 
-predictions = predict(args, root)
+#predictions = predict(args, root)
 
 
 # ### 2.4.Outputs Segmented Point Cloud
@@ -313,12 +314,12 @@ def visualise(root_path, filename, predictions):
 # In[16]:
 
 
-visualise(root, file, predictions)
+#visualise(root, file, predictions)
 
 
 # # **Regrouping in a Class**
 
-# In[1]:
+# In[3]:
 
 
 import os.path
@@ -374,7 +375,7 @@ class PointCloudSegmentation(object):
         """ take a raw point cloud as input and output a segmented point cloud in a .ply file"""
         root, file = self._partition(input_pcl)
         print("=================\n   "+ 'Running Inferences' +"\n=================")
-        predictions = self._predict(root)
+        predictions = self._predict(root, file)
         print("=================\n   "+ 'Outputing Segmented Point Cloud' +"\n=================")
         if visualize :
             self._visualise(root, file , predictions)
@@ -514,9 +515,10 @@ class PointCloudSegmentation(object):
             print("Timer : %5.1f / %5.1f / %5.1f " % (times[0], times[1], times[2]))
             return root[:-1], folder + file_name
     
-    def _predict(self, root):
+    def _predict(self, root, file):
         self._args.ROOT_PATH = root
-        HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH)
+        file_name = os.path.splitext(os.path.basename(file))[0]+'.h5'
+        HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, single_file = True, filename = file_name)
         create_dataset = HelixDataset().get_datasets
 
         collected = defaultdict(list)
@@ -571,8 +573,9 @@ class PointCloudSegmentation(object):
             raise ValueError("It looks like the spg is not adapted to the result file") 
         pred_full = provider.reduced_labels2full(pred_red, components, len(xyz))
 
-        print("writing the prediction file...")
+        print("writing the prediction file in {}...".format(ply_folder))
         provider.prediction2ply(ply_file + "_pred.ply", xyz, pred_full+1, n_labels,  self._args.dataset)
+        
     
 
 
@@ -583,16 +586,18 @@ class PointCloudSegmentation(object):
 # In[2]:
 
 
+"""
 MODEL_PATH = 'results/s3dis/bw/cv1/model.pth.tar'
 model_config = 'gru_10_0,f_13'
 edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d'
 pc_attribs = 'xyzelspvXYZ'
+"""
 
 
 # In[3]:
 
 
-model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs)
+#model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs)
 
 
 # ## Load the Weights
@@ -600,7 +605,7 @@ model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attrib
 # In[4]:
 
 
-model.load_model()
+#model.load_model()
 
 
 # ## Segment the Point Cloud
@@ -608,5 +613,5 @@ model.load_model()
 # In[5]:
 
 
-predictions = model.process('data/TEST/data/test/99DuxtonRd.ply', visualize = True ) #set visualize to True if you want to write out the segmented point cloud.
+#predictions = model.process('data/TEST/data/test/99DuxtonRd.ply', visualize = True ) #set visualize to True if you want to write out the segmented point cloud.
 

@@ -85,7 +85,7 @@ class HelixDataset:
         pts = pts  - np.min(pts,axis=0,keepdims=True) 
         return pts
     
-    def preprocess_pointclouds(self,ROOT_PATH):
+    def preprocess_pointclouds(self,ROOT_PATH, single_file = False, filename = ''):
         """ Preprocesses data by splitting them by components and normalizing."""
 
         for n,folder in enumerate(self.folders):
@@ -95,14 +95,43 @@ class HelixDataset:
             if not os.path.exists(pathP):
                 os.makedirs(pathP)
             random.seed(n)
+            
+            if not single_file :
+                for file in os.listdir(pathC):
+                    print(file)
+                    if file.endswith(".h5"):
+                        f = h5py.File(pathD + file, 'r')
+                        xyz = f['xyz'][:]
+                        elpsv = np.stack([ f['xyz'][:,2][:], f['linearity'][:], f['planarity'][:], f['scattering'][:], f['verticality'][:] ], axis=1)
 
-            for file in os.listdir(pathC):
+                        # rescale to [-0.5,0.5]; keep xyz
+                        elpsv[:,0] = elpsv[:,0] / np.max(elpsv[:,0]) - 0.5 
+                        elpsv[:,1:] -= 0.5
+
+                        ma, mi = np.max(xyz,axis=0,keepdims=True), np.min(xyz,axis=0,keepdims=True)
+                        xyzn = (xyz - mi) / (ma - mi + 1e-8)   # as in PointNet ("normalized location as to the room (from 0 to 1)")
+
+                        rgb = np.zeros((xyz.shape[0],3))
+                        P = np.concatenate([xyz, rgb,elpsv, xyzn], axis=1)
+
+                        f = h5py.File(os.path.join(pathC, file), 'r')
+                        numc = len(f['components'].keys())
+
+                        with h5py.File(os.path.join(pathP, file), 'w') as hf:
+                            for c in range(numc):
+                                idx = f['components/{:d}'.format(c)][:].flatten()
+                                if idx.size > 10000: # trim extra large segments, just for speed-up of loading time
+                                    ii = random.sample(range(idx.size), k=10000)
+                                    idx = idx[ii]
+
+                                hf.create_dataset(name='{:d}'.format(c), data=P[idx,...])
+            else :
+                file = filename
                 print(file)
                 if file.endswith(".h5"):
                     f = h5py.File(pathD + file, 'r')
                     xyz = f['xyz'][:]
                     elpsv = np.stack([ f['xyz'][:,2][:], f['linearity'][:], f['planarity'][:], f['scattering'][:], f['verticality'][:] ], axis=1)
-
                     # rescale to [-0.5,0.5]; keep xyz
                     elpsv[:,0] = elpsv[:,0] / np.max(elpsv[:,0]) - 0.5 
                     elpsv[:,1:] -= 0.5
@@ -123,4 +152,4 @@ class HelixDataset:
                                 ii = random.sample(range(idx.size), k=10000)
                                 idx = idx[ii]
 
-                            hf.create_dataset(name='{:d}'.format(c), data=P[idx,...])
+                            hf.create_dataset(name='{:d}'.format(c), data=P[idx,...])               
