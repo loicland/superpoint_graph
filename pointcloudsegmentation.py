@@ -38,6 +38,7 @@ import s3dis_dataset
 import custom_dataset
 
 from pcl_segmentation import PointCloudSegmentation
+from visualisation import display_cloud
 
 
 def parse_args():
@@ -77,5 +78,9 @@ if __name__ == '__main__':
     model.load_model()
     
     # Run Inferences and outputs Semantic Segmented Point Cloud
-    model.process(args.input, args.dataset, args.viz)
+    xyz, xyz_labels = model.process(args.input, args.dataset)
+    
+    #Visualizing Segmented Point Cloud in the Browser
+    if args.viz == True:
+        model.display(xyz, xyz_labels)
     

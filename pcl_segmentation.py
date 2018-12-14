@@ -41,6 +41,8 @@ import provider
 import s3dis_dataset
 import custom_dataset
 
+from visualisation import display_cloud
+
 
 # # **Point Cloud Segmentation Steps**
 
@@ -308,7 +310,7 @@ def visualise(root_path, filename, predictions):
 
 # # **Regrouping in a Class**
 
-# In[2]:
+# In[3]:
 
 
 class PointCloudSegmentation(object):
@@ -327,16 +329,30 @@ class PointCloudSegmentation(object):
         self._args = None
         
     
-    def process(self, input_pcl, dataset = 'helix', visualize = True):
+    def process(self, input_pcl, dataset = 'helix'):
         """ take a raw point cloud as input and output a segmented point cloud in a .ply file"""
         self._args.dataset = dataset
         root, folder, file = self._partition(input_pcl)
         print("=================\n   "+ 'Running Inferences' +"\n=================")
         predictions = self._predict(root, folder, file)
-        print("=================\n   "+ 'Outputing Segmented Point Cloud' +"\n=================")
-        if visualize :
-            self._visualise(root, folder+file , predictions)
-        return predictions
+        print("=================\n   "+ 'Saving Segmented Point Cloud' +"\n=================")
+        xyz, xyz_labels = self._save(root, folder+file , predictions)
+        return xyz, xyz_labels
+    
+    def display(self, xyz, xyz_labels):
+        n_labels = 13
+        clouds = []
+        labels = []
+        for i_label in range(0, n_labels+1):
+            cloud = xyz[np.where(xyz_labels == i_label)]
+            # converting simple array to open3d.PointCloud object
+            pcd = o3d.PointCloud()
+            pcd.points = o3d.Vector3dVector(cloud)
+            if len(pcd.points) != 0 :
+                clouds.append(pcd)
+                labels.append(i_label)
+        display_cloud(clouds = clouds, labels = labels)
+
     
     
     def load_model(self):
@@ -537,7 +553,7 @@ class PointCloudSegmentation(object):
         return predictions  
     
     
-    def _visualise(self, root_path, filename,predictions):
+    def _save(self, root_path, filename,predictions):
         n_labels = 13
 
         folder = os.path.split(filename)[0] + '/'
@@ -568,15 +584,16 @@ class PointCloudSegmentation(object):
 
         print("writing the prediction file (i.e Semantic Segmented Point Cloud) in {}...".format(ply_folder))
         provider.prediction2ply(ply_file + "_pred.ply", xyz, pred_full+1, n_labels,  self._args.dataset)
+        xyz_labels = pred_full +1
         
-    
+        return xyz, xyz_labels
 
 
 # # **How to use the Class**
 
 # ## Initialize the model
 
-# In[3]:
+# In[4]:
 
 
 #MODEL_PATH = 'results/s3dis/bw/cv1/model.pth.tar'
@@ -585,7 +602,7 @@ class PointCloudSegmentation(object):
 #pc_attribs = 'xyzelspvXYZ'
 
 
-# In[4]:
+# In[5]:
 
 
 #model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs)
@@ -594,7 +611,7 @@ class PointCloudSegmentation(object):
 # 
 # ## Load the Weights
 
-# In[5]:
+# In[6]:
 
 
 #model.load_model()
@@ -602,8 +619,16 @@ class PointCloudSegmentation(object):
 
 # ## Segment the Point Cloud
 
-# In[5]:
+# In[7]:
 
 
-#predictions = model.process('data/TEST/data/test/99DuxtonRd.ply', visualize = True ) #set visualize to True if you want to write out the segmented point cloud.
+#xyz, xyz_labels = model.process('data/TEST/data/test/99DuxtonRd.ply') #set visualize to True if you want to write out the segmented point cloud.
+
+
+# ## Visualisation
+
+# In[9]:
+
+
+#model.display(xyz, xyz_labels)
 
