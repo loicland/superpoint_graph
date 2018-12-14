@@ -3,7 +3,7 @@ import open3d
 import os
 from bs4 import BeautifulSoup
 
-def display_cloud(clouds,las_header=None,labels = [],display = False,size =1000000): 
+def display_cloud(clouds,las_header=None,labels = [], colors = [], display = False,size =1000000): 
     """
     Takes a list of pcl or open3d point clouds together with the input file's header and
     uses Potree converter to generate the viewable assests. You can view the cloud at the following URL
@@ -38,8 +38,6 @@ def display_cloud(clouds,las_header=None,labels = [],display = False,size =10000
     soup.find('script').string = string_script
     main_html.find_all('script')[-1].replace_with(soup.head.script)
     
-    colors = np.random.rand(len(clouds),3)
-
     # decimates and saves to file
     for i in range(len(clouds)):
         cloud = clouds[i]
