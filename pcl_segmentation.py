@@ -5,12 +5,6 @@
 
 # This notebook aims at coding a single step to process point cloud : It details each processing step from a raw point cloud to a semantic segmented point cloud. The method will take the point cloud in input and will output the corresponding segmented point cloud
 
-# # **Point Cloud Segmentation Steps**
-
-# ## ***1.Partitioning Point Cloud***
-
-# This subsubsection adapt the code used in partition/parition.py.
-
 # In[ ]:
 
 
@@ -48,7 +42,13 @@ import s3dis_dataset
 import custom_dataset
 
 
-# ### 1.2.Partitionning 
+# # **Point Cloud Segmentation Steps**
+
+# ## ***Partitioning Point Cloud***
+
+# This subsubsection adapt the code used in partition/parition.py.
+
+# ### Partitionning 
 
 # In[2]:
 
@@ -174,36 +174,9 @@ def _partition(path_to_pcl, k_nn_geof = 45, k_nn_adj = 10, lambda_edge_weight = 
 #_partition('data/TEST/data/test/room_19065.ply')
 
 
-# ## ***2.Embedding Semantic Informations***
+# ## ***Embedding Semantic Informations***
 
-# ### 2.1.Import
-
-# In[5]:
-
-
-import torch
-import torch.nn as nn
-from providers.datasets import HelixDataset
-from collections import defaultdict
-import sys
-import numpy as np
-import h5py
-import os
-from plyfile import PlyData, PlyElement
-import open3d as o3d
-
-sys.path.append('learning')
-sys.path.append('partition')
-import spg
-import graphnet
-import pointnet
-import metrics
-import provider
-import s3dis_dataset
-import custom_dataset
-
-
-# ### 2.2.Loading model and Weights
+# ### Loading model and Weights
 
 # In[7]:
 
@@ -250,7 +223,7 @@ dbinfo = HelixDataset().get_info(edge_attribs,pc_attribs)
 #model,cloud_embedder, args = load_weights(MODEL_PATH,model_config,dbinfo)
 
 
-# ### 2.3.Run Inferences
+# ### Run Inferences
 
 # In[12]:
 
@@ -289,7 +262,7 @@ def predict(args, root):
 #predictions = predict(args, root)
 
 
-# ### 2.4.Outputs Segmented Point Cloud
+# ### Outputs Segmented Point Cloud
 
 # In[15]:
 
