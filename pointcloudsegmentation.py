@@ -46,10 +46,12 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs')
     parser.add_argument('--input', default='', help='path to the point cloud')
+    parser.add_argument('--dataset', default='helix', help='possible values : helix or s3dis')
     parser.add_argument('--model_path', default='results/s3dis/bw/cv1/model.pth.tar', help='pretrained model')
     parser.add_argument('--model_config', default='gru_10_0,f_13', help='configuration of the model')
     parser.add_argument('--edge_attribs', default='delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d', help='Edge attribute definition, see spg_edge_features() in spg.py for definitions.')
     parser.add_argument('--pc_attribs', default='xyzelspvXYZ', help='Point attributes fed to PointNets')
+    parser.add_argument('--viz', default='True', help='set to True if you want to output the segmented points cloud .ply file')
     
     if len(sys.argv) == 1:
         parser.print_help()
@@ -64,6 +66,9 @@ if __name__ == '__main__':
 
     print('Called with args:')
     print(args)
+    
+    if args.dataset != 'helix' and args.dataset != 's3dis':
+        raise ValueError('{} is not accepted as a dataset value'.format(args.dataset))
                         
     # Creating Model and Loading Weights.
     model = PointCloudSegmentation(args.model_path, args.model_config, args.edge_attribs, args.pc_attribs)
@@ -72,5 +77,5 @@ if __name__ == '__main__':
     model.load_model()
     
     # Run Inferences and outputs Semantic Segmented Point Cloud
-    model.process(args.input)
+    model.process(args.input, args.dataset, args.viz)
     

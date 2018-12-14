@@ -125,6 +125,23 @@ def get_color_from_label(object_label, dataset):
             12: [ 81, 109, 114], #'board'   ->  grey
             13: [233, 233, 229], #'clutter'  ->  light grey
             }.get(object_label, -1)
+    elif (dataset == 'helix'): #Semantic3D
+        object_label = {
+            0: [0   ,   0,   0], #unlabelled .->. black
+            1: [ 233, 229, 107], #'ceiling' .-> .yellow
+            2: [  95, 156, 196], #'floor' .-> . blue
+            3: [ 179, 116,  81], #'wall'  ->  brown
+            4: [  81, 163, 148], #'column'  ->  bluegreen
+            5: [ 241, 149, 131], #'beam'  ->  salmon
+            6: [  77, 174,  84], #'window'  ->  bright green
+            7: [ 108, 135,  75], #'door'   ->  dark green
+            8: [  79,  79,  76], #'table'  ->  dark grey
+            9: [  41,  49, 101], #'chair'  ->  darkblue
+            10: [223,  52,  52], #'bookcase'  ->  red
+            11: [ 89,  47,  95], #'sofa'  ->  purple
+            12: [ 81, 109, 114], #'board'   ->  grey
+            13: [233, 233, 229], #'clutter'  ->  light grey
+            }.get(object_label, -1)
     elif (dataset == 'sema3d'): #Semantic3D
         object_label =  {
             0: [0   ,   0,   0], #unlabelled .->. black

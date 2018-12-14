@@ -51,15 +51,20 @@ class HelixDataset:
             'inv_class_map': {value:key for (key,value) in self.labels.items()},
         }
     
-    def get_datasets(self,args, test_seed_offset=0):
+    def get_datasets(self, args, test_seed_offset=0, single_file = False, filename ='', folder_s = '' ):
         """ Gets training and test datasets. """
         # Load superpoints graphs
         testlist, trainlist = [], []
-        for folder in self.folders:
-            path = os.path.join(args.ROOT_PATH,'superpoint_graphs',folder)
-            for fname in sorted(os.listdir(path)):
-                if fname.endswith(".h5"):
-                    testlist.append(spg.spg_reader(args, path + fname, True))
+        if not single_file :
+            for folder in self.folders:
+                path = os.path.join(args.ROOT_PATH,'superpoint_graphs',folder)
+                for fname in sorted(os.listdir(path)):
+                    if fname.endswith(".h5"):
+                        testlist.append(spg.spg_reader(args, path + fname, True))
+        else :
+            path = os.path.join(args.ROOT_PATH,'superpoint_graphs',folder_s)
+            if filename.endswith(".h5"):
+                testlist.append(spg.spg_reader(args, path + filename, True))
            
         # Load training data for normalisation purposes mainly
         for n in range(1,7):
