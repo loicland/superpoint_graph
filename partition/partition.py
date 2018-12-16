@@ -80,7 +80,7 @@ for folder in folders:
         #list all ply files in the folder
         files = glob.glob(data_folder+"*.ply")
         #list all las files in the folder
-        files = glob.glob(data_folder+"*.las")
+        files.extend(glob.glob(data_folder+"*.las"))
         
     if (len(files) == 0):
         raise ValueError('%s is empty' % data_folder)
