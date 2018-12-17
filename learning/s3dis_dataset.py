@@ -16,21 +16,29 @@ import torchnet as tnt
 import h5py
 import spg
 
-def get_datasets(args, test_seed_offset=0):
+def get_datasets(args, test_seed_offset=0, single_file = False, filename ='', folder_s = '' ):
     """ Gets training and test datasets. """
 
     # Load superpoints graphs
     testlist, trainlist = [], []
+    if not single_file :
+        for folder in self.folders:
+            path = os.path.join(args.ROOT_PATH,'superpoint_graphs',folder)
+            for fname in sorted(os.listdir(path)):
+                if fname.endswith(".h5"):
+                    testlist.append(spg.spg_reader(args, path + fname, True))
+    else :
+        path = os.path.join(args.ROOT_PATH,'superpoint_graphs',folder_s)
+        if filename.endswith(".h5"):
+            testlist.append(spg.spg_reader(args, path + filename, True))
+           
+    # Load training data for normalisation purposes mainly
     for n in range(1,7):
         if n != args.cvfold:
             path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, n)
             for fname in sorted(os.listdir(path)):
                 if fname.endswith(".h5"):
                     trainlist.append(spg.spg_reader(args, path + fname, True))
-    path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, args.cvfold)
-    for fname in sorted(os.listdir(path)):
-        if fname.endswith(".h5"):
-            testlist.append(spg.spg_reader(args, path + fname, True))
 
     # Normalize edge features
     if args.spg_attribs01:
@@ -42,9 +50,9 @@ def get_datasets(args, test_seed_offset=0):
                                     functools.partial(spg.loader, train=False, args=args, db_path=args.S3DIS_PATH, test_seed_offset=test_seed_offset))
 
 
-def get_info(args):
+def get_info(edge_attribs,pc_attribs):
     edge_feats = 0
-    for attrib in args.edge_attribs.split(','):
+    for attrib in edge_attribs.split(','):
         a = attrib.split('/')[0]
         if a in ['delta_avg', 'delta_std', 'xyz']:
             edge_feats += 3
@@ -52,7 +60,7 @@ def get_info(args):
             edge_feats += 1
 
     return {
-        'node_feats': 14 if args.pc_attribs=='' else len(args.pc_attribs),
+        'node_feats': 14 if pc_attribs=='' else len(pc_attribs),
         'edge_feats': edge_feats,
         'classes': 13,
         'inv_class_map': {0:'ceiling', 1:'floor', 2:'wall', 3:'column', 4:'beam', 5:'window', 6:'door', 7:'table', 8:'chair', 9:'bookcase', 10:'sofa', 11:'board', 12:'clutter'},

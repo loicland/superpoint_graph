@@ -1,7 +1,9 @@
 import numpy as np
 import open3d
+import os
+from bs4 import BeautifulSoup
 
-def display_cloud(clouds,las_header=None,labels = [],display = False,size =1000000): 
+def display_cloud(clouds,las_header=None,labels = [], colors = [], display = False,size =1000000): 
     """
     Takes a list of pcl or open3d point clouds together with the input file's header and
     uses Potree converter to generate the viewable assests. You can view the cloud at the following URL
@@ -9,6 +11,7 @@ def display_cloud(clouds,las_header=None,labels = [],display = False,size =10000
     """
     PAGE_TEMPLATE = '/opt/potree/dev/workspaces/PotreeConverter/master/PotreeConverter/resources/page_template/'
     os.popen('ps -ef | grep "http.server" | awk \'{print $2}\' | xargs kill -9')
+    potree_converter = '/usr/local/bin/PotreeConverter'
 
     if not os.path.exists('viewer'):
         os.popen('mkdir viewer').readlines()
@@ -35,14 +38,15 @@ def display_cloud(clouds,las_header=None,labels = [],display = False,size =10000
     soup.find('script').string = string_script
     main_html.find_all('script')[-1].replace_with(soup.head.script)
     
-    colors = np.random.rand(len(clouds),3)
-
+    if colors == [] :
+        colors = np.random.rand(len(clouds),3)
+    
     # decimates and saves to file
     for i in range(len(clouds)):
         cloud = clouds[i]
         cloud_arr = np.asarray(cloud.points)
         if i < len(labels):
-            label = labels[i]
+            label = str(labels[i])
         else:
             label = str(i)
 
