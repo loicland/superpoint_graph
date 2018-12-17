@@ -38,6 +38,9 @@ def display_cloud(clouds,las_header=None,labels = [], colors = [], display = Fal
     soup.find('script').string = string_script
     main_html.find_all('script')[-1].replace_with(soup.head.script)
     
+    if colors == [] :
+        colors = np.random.rand(len(clouds),3)
+    
     # decimates and saves to file
     for i in range(len(clouds)):
         cloud = clouds[i]

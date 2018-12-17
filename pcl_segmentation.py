@@ -310,7 +310,7 @@ def visualise(root_path, filename, predictions):
 
 # # **Regrouping in a Class**
 
-# In[52]:
+# In[2]:
 
 
 class PointCloudSegmentation(object):
@@ -381,7 +381,7 @@ class PointCloudSegmentation(object):
         return 
     
     
-    def read(self, root_path, filename, prediction_file):
+    def load_prediction(self, root_path, filename, prediction_file):
         n_labels = 13
 
         folder = os.path.split(filename)[0] + '/'
@@ -640,7 +640,7 @@ class PointCloudSegmentation(object):
 
 # ## Initialize the model
 
-# In[63]:
+# In[3]:
 
 
 MODEL_PATH = 'results/s3dis/bw/cv1/model.pth.tar'
@@ -649,7 +649,7 @@ edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/
 pc_attribs = 'xyzelspvXYZ'
 
 
-# In[64]:
+# In[4]:
 
 
 model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs)
@@ -658,7 +658,7 @@ model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attrib
 # 
 # ## Load the Weights
 
-# In[65]:
+# In[5]:
 
 
 model.load_model()
@@ -666,7 +666,7 @@ model.load_model()
 
 # ## Segment the Point Cloud
 
-# In[6]:
+# In[10]:
 
 
 xyz, xyz_labels = model.process('data/TEST/data/test/99DuxtonRd.ply', dataset = 'helix') #set visualize to True if you want to write out the segmented point cloud.
@@ -674,15 +674,15 @@ xyz, xyz_labels = model.process('data/TEST/data/test/99DuxtonRd.ply', dataset = 
 
 # ## Or reading an existing file
 
-# In[66]:
+# In[7]:
 
 
-xyz, xyz_labels = model.read('data/TEST', 'test/99DuxtonRd', '99DuxtonRd_predictions.h5')
+xyz, xyz_labels = model.load_prediction('data/TEST', 'test/99DuxtonRd', '99DuxtonRd_predictions.h5')
 
 
 # ## Visualisation
 
-# In[67]:
+# In[9]:
 
 
 model.display(xyz, xyz_labels, dataset = 'helix')
