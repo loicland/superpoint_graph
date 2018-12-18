@@ -310,7 +310,7 @@ def visualise(root_path, filename, predictions):
 
 # # **Regrouping in a Class**
 
-# In[2]:
+# In[21]:
 
 
 class PointCloudSegmentation(object):
@@ -517,11 +517,11 @@ class PointCloudSegmentation(object):
                 
                 if self._args.dataset ==' s3dis':
                     xyz, rgb, labels = read_s3dis_format(data_file)
-                    if args.voxel_width > 0:
+                    if voxel_width > 0:
                         xyz, rgb, labels = libply_c.prune(xyz, voxel_width, rgb, labels, n_labels)
                 elif self._args.dataset == 'helix' :
                     xyz = helix_data.read_pointcloud(data_file).astype(dtype='float32')
-                    if args.voxel_width > 0:
+                    if voxel_width > 0:
                         xyz = libply_c.prune(xyz, voxel_width, np.zeros(xyz.shape,dtype='u1'), np.array(1,dtype='u1'), 0)[0]
                     labels = []
                     rgb = []
@@ -640,7 +640,7 @@ class PointCloudSegmentation(object):
 
 # ## Initialize the model
 
-# In[3]:
+# In[22]:
 
 
 MODEL_PATH = 'results/s3dis/bw/cv1/model.pth.tar'
@@ -649,7 +649,7 @@ edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/
 pc_attribs = 'xyzelspvXYZ'
 
 
-# In[4]:
+# In[23]:
 
 
 model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs)
@@ -658,7 +658,7 @@ model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attrib
 # 
 # ## Load the Weights
 
-# In[5]:
+# In[24]:
 
 
 model.load_model()
@@ -666,23 +666,23 @@ model.load_model()
 
 # ## Segment the Point Cloud
 
-# In[10]:
+# In[25]:
 
 
-xyz, xyz_labels = model.process('data/TEST/data/test/99DuxtonRd.ply', dataset = 'helix') #set visualize to True if you want to write out the segmented point cloud.
+xyz, xyz_labels = model.process('data/TEST/data/test/down_room_1900.ply', dataset = 'helix') #set visualize to True if you want to write out the segmented point cloud.
 
 
 # ## Or reading an existing file
 
-# In[7]:
+# In[27]:
 
 
-xyz, xyz_labels = model.load_prediction('data/TEST', 'test/99DuxtonRd', '99DuxtonRd_predictions.h5')
+xyz, xyz_labels = model.load_prediction('data/TEST', 'test/room_1900', 'room_1900_predictions.h5')
 
 
 # ## Visualisation
 
-# In[9]:
+# In[28]:
 
 
 model.display(xyz, xyz_labels, dataset = 'helix')
