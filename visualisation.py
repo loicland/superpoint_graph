@@ -69,4 +69,4 @@ def display_cloud(clouds,las_header=None,labels = [], colors = [], display = Fal
     #launch server on port 9000
     print("launching server")
     os.popen('cd viewer && python -m http.server 3221')
-    print("server launched, go to https://jupyterhub.helix.re/user/nicolas/proxy/3221/cloud_viewer.html")
+    print("server launched, go to https://jupyterhub.helix.re/user/thomas/proxy/3221/cloud_viewer.html")

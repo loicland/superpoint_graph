@@ -310,7 +310,7 @@ def visualise(root_path, filename, predictions):
 
 # # **Regrouping in a Class**
 
-# In[21]:
+# In[3]:
 
 
 class PointCloudSegmentation(object):
@@ -457,7 +457,8 @@ class PointCloudSegmentation(object):
                 n_labels = 13
             elif self._args.dataset == 'helix':
                 helix_data = HelixDataset()
-                folder = helix_data.folders[0]
+                #folder = helix_data.folders[0]
+                folder = os.path.split(os.path.dirname(path_to_pcl))[1] + '/'
                 n_labels = len(helix_data.labels.keys())
             else:
                 raise ValueError('%s is an unknown data set' % dataset)
@@ -575,7 +576,7 @@ class PointCloudSegmentation(object):
         if self._args.dataset == 's3dis':
             create_dataset = s3dis_dataset.get_datasets
         elif self._args.dataset == 'helix':
-            HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, single_file = True, filename = file_name)
+            HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, single_file = True, filename = file_name, folder = folder)
             create_dataset = HelixDataset().get_datasets
         
         collected = defaultdict(list)
@@ -640,7 +641,7 @@ class PointCloudSegmentation(object):
 
 # ## Initialize the model
 
-# In[22]:
+# In[4]:
 
 
 MODEL_PATH = 'results/s3dis/bw/cv1/model.pth.tar'
@@ -649,7 +650,7 @@ edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/
 pc_attribs = 'xyzelspvXYZ'
 
 
-# In[23]:
+# In[5]:
 
 
 model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs)
@@ -658,7 +659,7 @@ model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attrib
 # 
 # ## Load the Weights
 
-# In[24]:
+# In[6]:
 
 
 model.load_model()
@@ -666,23 +667,23 @@ model.load_model()
 
 # ## Segment the Point Cloud
 
-# In[25]:
+# In[34]:
 
 
-xyz, xyz_labels = model.process('data/TEST/data/test/down_room_1900.ply', dataset = 'helix') #set visualize to True if you want to write out the segmented point cloud.
+xyz, xyz_labels = model.process('data/helix_bis/data/1950-charleston-road/test8_3.ply', dataset = 'helix') #set visualize to True if you want to write out the segmented point cloud.
 
 
 # ## Or reading an existing file
 
-# In[27]:
+# In[7]:
 
 
-xyz, xyz_labels = model.load_prediction('data/TEST', 'test/room_1900', 'room_1900_predictions.h5')
+xyz, xyz_labels = model.load_prediction('data/helix_bis', '1950-charleston-road/test_02', 'test_02_predictions.h5')
 
 
 # ## Visualisation
 
-# In[28]:
+# In[33]:
 
 
 model.display(xyz, xyz_labels, dataset = 'helix')
