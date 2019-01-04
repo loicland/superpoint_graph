@@ -310,7 +310,7 @@ def visualise(root_path, filename, predictions):
 
 # # **Regrouping in a Class**
 
-# In[21]:
+# In[2]:
 
 
 class PointCloudSegmentation(object):
@@ -640,7 +640,7 @@ class PointCloudSegmentation(object):
 
 # ## Initialize the model
 
-# In[22]:
+# In[3]:
 
 
 MODEL_PATH = 'results/s3dis/bw/cv1/model.pth.tar'
@@ -649,7 +649,7 @@ edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/
 pc_attribs = 'xyzelspvXYZ'
 
 
-# In[23]:
+# In[4]:
 
 
 model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs)
@@ -658,7 +658,7 @@ model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attrib
 # 
 # ## Load the Weights
 
-# In[24]:
+# In[5]:
 
 
 model.load_model()
@@ -674,7 +674,7 @@ xyz, xyz_labels = model.process('data/TEST/data/test/down_room_1900.ply', datase
 
 # ## Or reading an existing file
 
-# In[27]:
+# In[6]:
 
 
 xyz, xyz_labels = model.load_prediction('data/TEST', 'test/room_1900', 'room_1900_predictions.h5')
