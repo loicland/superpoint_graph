@@ -43,6 +43,9 @@ import custom_dataset
 
 from visualisation import display_cloud
 
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
 
 # # **Point Cloud Segmentation Steps**
 
@@ -382,6 +385,11 @@ class PointCloudSegmentation(object):
     
     
     def load_prediction(self, root_path, filename, prediction_file):
+        """ load the predictions from a file
+        root_path : relative path to the data folder (containing features, superpoint graph... folders)
+        filename : name of the file without the extension
+        prediction_file : name of the prediction file
+        """
         n_labels = 13
 
         folder = os.path.split(filename)[0] + '/'
@@ -457,7 +465,7 @@ class PointCloudSegmentation(object):
                 n_labels = 13
             elif self._args.dataset == 'helix':
                 helix_data = HelixDataset()
-                folder = helix_data.folders[0]
+                folder = os.path.split(os.path.split(os.path.abspath(path_to_pcl))[0])[1] + '/'
                 n_labels = len(helix_data.labels.keys())
             else:
                 raise ValueError('%s is an unknown data set' % dataset)
@@ -472,7 +480,7 @@ class PointCloudSegmentation(object):
                 os.mkdir(root + "superpoint_graphs")
 
             print("=================\n   "+ 'Start Partitioning {}'.format(file)+"\n=================")
-           
+            
             data_folder = root   + "data/"              + folder
             cloud_folder  = root + "clouds/"            + folder
             fea_folder  = root   + "features/"          + folder
@@ -493,7 +501,7 @@ class PointCloudSegmentation(object):
                 if not os.path.isfile(data_folder +  file_name + '/' + file):
                     raise ValueError('{} does not exist in {}'.format(file, data_folder +  file_name + '/'))
             elif self._args.dataset == 'helix':
-                if not os.path.isfile(data_folder + file):
+                if not os.path.isfile(data_folder +  file):
                     raise ValueError('{} does not exist in {}'.format(file, data_folder))
             
             if self._args.dataset=='s3dis':
@@ -575,7 +583,7 @@ class PointCloudSegmentation(object):
         if self._args.dataset == 's3dis':
             create_dataset = s3dis_dataset.get_datasets
         elif self._args.dataset == 'helix':
-            HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, single_file = True, filename = file_name)
+            HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, single_file = True, filename = file_name, folder = folder)
             create_dataset = HelixDataset().get_datasets
         
         collected = defaultdict(list)
@@ -640,7 +648,7 @@ class PointCloudSegmentation(object):
 
 # ## Initialize the model
 
-# In[3]:
+# In[18]:
 
 
 MODEL_PATH = 'results/s3dis/bw/cv1/model.pth.tar'
@@ -649,7 +657,7 @@ edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/
 pc_attribs = 'xyzelspvXYZ'
 
 
-# In[4]:
+# In[19]:
 
 
 model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs)
@@ -658,7 +666,7 @@ model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attrib
 # 
 # ## Load the Weights
 
-# In[5]:
+# In[20]:
 
 
 model.load_model()
@@ -666,23 +674,23 @@ model.load_model()
 
 # ## Segment the Point Cloud
 
-# In[19]:
+# In[16]:
 
 
-xyz, xyz_labels = model.process('data/TEST/data/test/downsampled03_room1.ply', dataset = 'helix') #set visualize to True if you want to write out the segmented point cloud.
+xyz, xyz_labels = model.process('data/test/data/m1pys/test_02.ply', dataset = 'helix') #set visualize to True if you want to write out the segmented point cloud.
 
 
 # ## Or reading an existing file
 
-# In[7]:
+# In[21]:
 
 
-xyz, xyz_labels = model.load_prediction('data/TEST', 'test/downsampled03_room1', 'downsampled03_room1_predictions.h5')
+xyz, xyz_labels = model.load_prediction('data/test', 'm1pys/test_02', 'test_02_predictions.h5')
 
 
 # ## Visualisation
 
-# In[8]:
+# In[22]:
 
 
 model.display(xyz, xyz_labels, dataset = 'helix')
