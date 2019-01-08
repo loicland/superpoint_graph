@@ -666,23 +666,23 @@ model.load_model()
 
 # ## Segment the Point Cloud
 
-# In[25]:
+# In[19]:
 
 
-xyz, xyz_labels = model.process('data/TEST/data/test/down_room_1900.ply', dataset = 'helix') #set visualize to True if you want to write out the segmented point cloud.
+xyz, xyz_labels = model.process('data/TEST/data/test/downsampled03_room1.ply', dataset = 'helix') #set visualize to True if you want to write out the segmented point cloud.
 
 
 # ## Or reading an existing file
 
-# In[6]:
+# In[7]:
 
 
-xyz, xyz_labels = model.load_prediction('data/TEST', 'test/room_1900', 'room_1900_predictions.h5')
+xyz, xyz_labels = model.load_prediction('data/TEST', 'test/downsampled03_room1', 'downsampled03_room1_predictions.h5')
 
 
 # ## Visualisation
 
-# In[28]:
+# In[8]:
 
 
 model.display(xyz, xyz_labels, dataset = 'helix')
