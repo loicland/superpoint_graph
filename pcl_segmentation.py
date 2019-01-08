@@ -333,6 +333,9 @@ class PointCloudSegmentation(object):
         """ take a raw point cloud as input and output a segmented point cloud in a .ply file"""
         self._args.dataset = dataset
         root, folder, file = self._partition(input_pcl)
+        print(root)
+        print(folder)
+        print(file)
         print("=================\n   "+ 'Running Inferences' +"\n=================")
         predictions = self._predict(root, folder, file)
         print("=================\n   "+ 'Saving Segmented Point Cloud' +"\n=================")
@@ -457,7 +460,7 @@ class PointCloudSegmentation(object):
                 n_labels = 13
             elif self._args.dataset == 'helix':
                 helix_data = HelixDataset()
-                folder = helix_data.folders[0]
+                folder = os.path.split(os.path.split(os.path.abspath(path_to_pcl))[0])[1] + '/'
                 n_labels = len(helix_data.labels.keys())
             else:
                 raise ValueError('%s is an unknown data set' % dataset)
@@ -472,7 +475,7 @@ class PointCloudSegmentation(object):
                 os.mkdir(root + "superpoint_graphs")
 
             print("=================\n   "+ 'Start Partitioning {}'.format(file)+"\n=================")
-           
+            
             data_folder = root   + "data/"              + folder
             cloud_folder  = root + "clouds/"            + folder
             fea_folder  = root   + "features/"          + folder
@@ -493,7 +496,7 @@ class PointCloudSegmentation(object):
                 if not os.path.isfile(data_folder +  file_name + '/' + file):
                     raise ValueError('{} does not exist in {}'.format(file, data_folder +  file_name + '/'))
             elif self._args.dataset == 'helix':
-                if not os.path.isfile(data_folder + file):
+                if not os.path.isfile(data_folder +  file):
                     raise ValueError('{} does not exist in {}'.format(file, data_folder))
             
             if self._args.dataset=='s3dis':
@@ -575,7 +578,7 @@ class PointCloudSegmentation(object):
         if self._args.dataset == 's3dis':
             create_dataset = s3dis_dataset.get_datasets
         elif self._args.dataset == 'helix':
-            HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, single_file = True, filename = file_name)
+            HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, single_file = True, filename = file_name, folder = folder)
             create_dataset = HelixDataset().get_datasets
         
         collected = defaultdict(list)
@@ -666,10 +669,10 @@ model.load_model()
 
 # ## Segment the Point Cloud
 
-# In[19]:
+# In[7]:
 
 
-xyz, xyz_labels = model.process('data/TEST/data/test/downsampled03_room1.ply', dataset = 'helix') #set visualize to True if you want to write out the segmented point cloud.
+xyz, xyz_labels = model.process('data/S3DIS/data/Area_1/hallway_1/hallway_1.txt', dataset = 's3dis') #set visualize to True if you want to write out the segmented point cloud.
 
 
 # ## Or reading an existing file
