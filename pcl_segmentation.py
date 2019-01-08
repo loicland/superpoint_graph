@@ -43,6 +43,9 @@ import custom_dataset
 
 from visualisation import display_cloud
 
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
 
 # # **Point Cloud Segmentation Steps**
 
@@ -333,9 +336,6 @@ class PointCloudSegmentation(object):
         """ take a raw point cloud as input and output a segmented point cloud in a .ply file"""
         self._args.dataset = dataset
         root, folder, file = self._partition(input_pcl)
-        print(root)
-        print(folder)
-        print(file)
         print("=================\n   "+ 'Running Inferences' +"\n=================")
         predictions = self._predict(root, folder, file)
         print("=================\n   "+ 'Saving Segmented Point Cloud' +"\n=================")
@@ -385,6 +385,11 @@ class PointCloudSegmentation(object):
     
     
     def load_prediction(self, root_path, filename, prediction_file):
+        """ load the predictions from a file
+        root_path : relative path to the data folder (containing features, superpoint graph... folders)
+        filename : name of the file without the extension
+        prediction_file : name of the prediction file
+        """
         n_labels = 13
 
         folder = os.path.split(filename)[0] + '/'
@@ -643,7 +648,7 @@ class PointCloudSegmentation(object):
 
 # ## Initialize the model
 
-# In[3]:
+# In[18]:
 
 
 MODEL_PATH = 'results/s3dis/bw/cv1/model.pth.tar'
@@ -652,7 +657,7 @@ edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/
 pc_attribs = 'xyzelspvXYZ'
 
 
-# In[4]:
+# In[19]:
 
 
 model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs)
@@ -661,7 +666,7 @@ model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attrib
 # 
 # ## Load the Weights
 
-# In[5]:
+# In[20]:
 
 
 model.load_model()
@@ -669,23 +674,23 @@ model.load_model()
 
 # ## Segment the Point Cloud
 
-# In[7]:
+# In[16]:
 
 
-xyz, xyz_labels = model.process('data/S3DIS/data/Area_1/hallway_1/hallway_1.txt', dataset = 's3dis') #set visualize to True if you want to write out the segmented point cloud.
+xyz, xyz_labels = model.process('data/test/data/m1pys/test_02.ply', dataset = 'helix') #set visualize to True if you want to write out the segmented point cloud.
 
 
 # ## Or reading an existing file
 
-# In[7]:
+# In[21]:
 
 
-xyz, xyz_labels = model.load_prediction('data/TEST', 'test/downsampled03_room1', 'downsampled03_room1_predictions.h5')
+xyz, xyz_labels = model.load_prediction('data/test', 'm1pys/test_02', 'test_02_predictions.h5')
 
 
 # ## Visualisation
 
-# In[8]:
+# In[22]:
 
 
 model.display(xyz, xyz_labels, dataset = 'helix')
