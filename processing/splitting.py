@@ -136,38 +136,31 @@ def create_histogram(o3dcloud, bin_size=0.1, axis =2):
 
 # ## Loading Entire Point Cloud
 
-# In[7]:
+# In[5]:
 
 
-#data_path = '../data/TEST/data/test/room_1900.ply'
-#pcd = open3d.read_point_cloud(data_path)
+#INPUT_FILE = '../data/TEST/data/test/room_1900.ply'
+#pcd = open3d.read_point_cloud(INPUT_FILE)
 
-data_path = '../data/helix_bis/data/Rutherford/level_4/Rutherford_lvl4.laz'
-cloud, header = las_to_open3d(data_path)
+#INPUT_FILE = '../data/weWork/data/demo/helix_san_mateo_lvl2_03_clean.laz' 
+#cloud, header = las_to_open3d(INPUT_FILE)
 
-#data_path = '../data/helix_bis/data/1950-charleston-road/level2.ply'
-#cloud03 = open3d.read_point_cloud(data_path)
-
-
-# In[27]:
+INPUT_FILE = '../s3dis_full/Area_1.txt'
+cloud = open3d.read_point_cloud(INPUT_FILE,  format='xyz') # when reading from .txt files
 
 
-data_path = '../data/helix_bis/data/Rutherford/level_4/Rutherford_lvl3.laz'
-cloud1, header1 = las_to_open3d(data_path)
+# ## downsizing it (if too massive)
+
+# In[ ]:
 
 
-# ## downsizing it (too massive)
-
-# In[35]:
+small_cloud = open3d.voxel_down_sample(cloud, voxel_size = 0.03)
 
 
-small_cloud = open3d.voxel_down_sample(cloud1, voxel_size = 0.03)
+# In[8]:
 
 
-# In[43]:
-
-
-open3d.write_point_cloud('../data/helix_bis/data/Rutherford/level_3/downsampled03.ply', small_cloud)
+open3d.write_point_cloud('../data/weWork/data/demo/helix_san_mateo_lvl2_03_clean.ply', cloud)
 
 
 # In[41]:
@@ -178,75 +171,49 @@ cloud1.points
 
 # ## Splitting
 
-# In[31]:
+# In[6]:
 
 
-VOXEL_GRID = 0.03
-cloud03 = open3d.voxel_down_sample(cloud,VOXEL_GRID)
+#VOXEL_GRID = 0.03
+#cloud03 = open3d.voxel_down_sample(cloud,VOXEL_GRID)
 
-(floor,ceiling,z_histogram) = get_floorceiling(cloud03)
+(floor,ceiling,z_histogram) = get_floorceiling(cloud)
 print("Floor level = " + str(floor))
 print("Celing level = " + str(ceiling))
 
-
-# In[44]:
-
-
-cloud03 = small_cloud
-(floor,ceiling,z_histogram) = get_floorceiling(cloud03)
-print("Floor level = " + str(floor))
-print("Celing level = " + str(ceiling))
-minbox = cloud03.get_min_bound()
-maxbox = cloud03.get_max_bound()
+minbox = cloud.get_min_bound()
+maxbox = cloud.get_max_bound()
 ROOF_CEILING_PADDING = (ceiling - floor)*0.1
-new_cloud03 = open3d.crop_point_cloud(cloud03,[minbox[0],minbox[1],floor - ROOF_CEILING_PADDING],[maxbox[0],maxbox[1],ceiling + 1])
-plot_2d([new_cloud03],size = -1,axis_range=[minbox[0],maxbox[0],minbox[1],maxbox[1]],show_axis=True)
+new_cloud = open3d.crop_point_cloud(cloud,[minbox[0],minbox[1],floor - ROOF_CEILING_PADDING],[maxbox[0],maxbox[1],ceiling + ROOF_CEILING_PADDING])
+plot_2d([new_cloud],size = -1,axis_range=[minbox[0],maxbox[0],minbox[1],maxbox[1]],show_axis=True)
 
 
-# In[34]:
+# In[ ]:
 
 
-rd_crop = open3d.crop_point_cloud(cloud03,[20,-12,floor - ROOF_CEILING_PADDING],[50,15,ceiling + 1])
-open3d.write_point_cloud('../data/helix_bis/data/Rutherford/level_4/part01.ply', rd_crop)
+xmin = minbox[0]
+ymin = minbox[1]
 
 
-# Getting 5 random crops at different size :
-
-# In[28]:
+# In[26]:
 
 
-i = 0
-while i < 5:
-    x = np.random.randint(minbox[0], maxbox[0] - 9)
-    y = np.random.randint(minbox[1], maxbox[1] - 9)
-    rd_crop = open3d.crop_point_cloud(cloud03,[x,y,floor - ROOF_CEILING_PADDING],[x+8,y+8,ceiling + ROOF_CEILING_PADDING])
-    open3d.write_point_cloud('../data/helix_bis/data/1950-charleston-road/test8_{}.ply'.format(i), rd_crop)
-    i = i+1
+# generating 6x6 'rooms' by dividing the point cloud according to a grid
+n = 0
+ymin = minbox[1]
+while ymin < maxbox[1]:
+    xmin = minbox[0]
+    while xmin < maxbox[0]:
+        n += 1
+        crop = open3d.crop_point_cloud(cloud,[xmin,ymin,floor - ROOF_CEILING_PADDING],[xmin+6, ymin+6, ceiling + ROOF_CEILING_PADDING])
+        open3d.write_point_cloud('../data/custom_S3DIS/Area_5/crop_{}.ply'.format(n), crop)
+        xmin += 6
+    ymin += 6
+        
 
 
-# In[42]:
+# In[27]:
 
 
-open3d.write_point_cloud('../data/helix_bis/data/1600-google-amphi/test_11.ply', no_roofceiling_cloud03)
-
-
-# In[19]:
-
-
-np.random.randint(0,10)
-
-
-# In[22]:
-
-
-maxbox[1]
-
-
-# In[29]:
-
-
-x = np.random.randint(minbox[0], maxbox[0] - 9)
-y = np.random.randint(minbox[1], maxbox[1] - 9)
-rd_crop = open3d.crop_point_cloud(cloud03,[x,y,floor - ROOF_CEILING_PADDING],[x+8,y+8,ceiling + ROOF_CEILING_PADDING])
-open3d.write_point_cloud('../data/helix_bis/data/1950-charleston-road/test8_3.ply', rd_crop)
+n
 

@@ -46,6 +46,12 @@ elif 'helix' in args.dataset.lower():
     helix_data = HelixDataset()
     folders = helix_data.folders
     n_labels = len(helix_data.labels.keys())
+elif args.dataset == 'custom_s3dis':
+    sys.path.append('./providers')
+    from datasets import *
+    s3dis_data = CustomS3DISDataset()
+    folders = s3dis_data.folders
+    n_labels = len(s3dis_data.labels.keys())
 elif args.dataset == 'custom_dataset':
     folders = ["train/", "test/"]
     n_labels = 10 #number of classes
@@ -78,7 +84,7 @@ for folder in folders:
     if not os.path.isdir(spg_folder):
         os.mkdir(spg_folder)
     
-    if args.dataset=='s3dis':    
+    if args.dataset=='s3dis' or args.dataset=='custom_s3dis':    
         files = [os.path.join(data_folder, o) for o in os.listdir(data_folder) 
                 if os.path.isdir(os.path.join(data_folder,o))]
     elif args.dataset=='sema3d':
@@ -116,6 +122,11 @@ for folder in folders:
             cloud_file  = cloud_folder     + file_name
             fea_file    = fea_folder       + file_name + '.h5'
             spg_file    = spg_folder       + file_name + '.h5'
+        elif args.dataset=='custom_s3dis':
+            data_file   = data_folder      + file_name + s3dis_data.extension
+            cloud_file  = cloud_folder     + file_name
+            fea_file    = fea_folder       + file_name + '.h5'
+            spg_file    = spg_folder       + file_name + '.h5'
         elif args.dataset=='custom_dataset':
             #adapt to your hierarchy. The following 4 files must be defined
             data_file   = data_folder      + file_name + '.ply' #or .las
@@ -150,6 +161,12 @@ for folder in folders:
                     xyz = libply_c.prune(xyz, args.voxel_width, np.zeros(xyz.shape,dtype='u1'), np.array(1,dtype='u1'), 0)[0]
                 labels = []
                 rgb = []
+                
+            elif args.dataset=='custom_s3dis':
+                xyz, rgb, labels = s3dis_data.read_custom_s3dis_format(data_file)
+                if args.voxel_width > 0:
+                    xyz, rgb, labels = libply_c.prune(xyz, args.voxel_width, rgb, labels, n_labels)
+            
             elif args.dataset=='custom_dataset':
                 #implement in provider.py your own read_custom_format outputing xyz, rgb, labels
                 #example for ply files
@@ -185,15 +202,18 @@ for folder in folders:
                 features = np.hstack((geof, rgb/255.)).astype('float32')#add rgb as a feature for partitioning
                 features[:,3] = 2. * features[:,3] #increase importance of verticality (heuristic)
             elif args.dataset=='sema3d':
-                 features = geof
-                 geof[:,3] = 2. * geof[:, 3]
+                features = geof
+                geof[:,3] = 2. * geof[:, 3]
             elif 'helix' in args.dataset.lower():
+                features = geof
+                geof[:,3] = 2. * geof[:, 3]
+            elif args.dataset=='custom_s3dis':
                 features = geof
                 geof[:,3] = 2. * geof[:, 3]
             elif args.dataset=='custom_dataset':
                 #choose here which features to use for the partition
-                 features = geof
-                 geof[:,3] = 2. * geof[:, 3]
+                features = geof
+                geof[:,3] = 2. * geof[:, 3]
                 
             graph_nn["edge_weight"] = np.array(1. / ( args.lambda_edge_weight + graph_nn["distances"] / np.mean(graph_nn["distances"])), dtype = 'float32')
             print("        minimal partition...")
