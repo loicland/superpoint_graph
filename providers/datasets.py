@@ -7,6 +7,7 @@ import sys
 import torchnet as tnt
 import h5py
 import random
+from numpy import genfromtxt
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path,'../learning'))

@@ -20,6 +20,8 @@ import open3d
 from laspy.file import File
 from laspy.header import Header
 
+import math
+
 os.environ["PATH"]+=os.pathsep+os.path.dirname(sys.executable)
 
 
@@ -136,7 +138,7 @@ def create_histogram(o3dcloud, bin_size=0.1, axis =2):
 
 # ## Loading Entire Point Cloud
 
-# In[5]:
+# In[ ]:
 
 
 #INPUT_FILE = '../data/TEST/data/test/room_1900.ply'
@@ -145,8 +147,8 @@ def create_histogram(o3dcloud, bin_size=0.1, axis =2):
 #INPUT_FILE = '../data/weWork/data/demo/helix_san_mateo_lvl2_03_clean.laz' 
 #cloud, header = las_to_open3d(INPUT_FILE)
 
-INPUT_FILE = '../s3dis_full/Area_1.txt'
-cloud = open3d.read_point_cloud(INPUT_FILE,  format='xyz') # when reading from .txt files
+INPUT_FILE = '../s3dis_full/Area_1.txt' #'../data/custom_S3DIS/data/Area_1/crop_9.txt'
+cloud = open3d.read_point_cloud(INPUT_FILE,  format='xyz') # when reading from .txt files 
 
 
 # ## downsizing it (if too massive)
@@ -188,14 +190,134 @@ new_cloud = open3d.crop_point_cloud(cloud,[minbox[0],minbox[1],floor - ROOF_CEIL
 plot_2d([new_cloud],size = -1,axis_range=[minbox[0],maxbox[0],minbox[1],maxbox[1]],show_axis=True)
 
 
-# In[ ]:
+# In[9]:
 
 
 xmin = minbox[0]
 ymin = minbox[1]
+xmax = maxbox[0]
+ymax = maxbox[1]
 
 
-# In[26]:
+# I am cropping the point cloud in a row order from left to right.
+
+# In[10]:
+
+
+w = math.ceil((xmax-xmin)/6)
+h = math.ceil((ymax-ymin)/6)
+print(' width : {} ; height : {}'.format(w,h))
+
+
+# In[11]:
+
+
+rooms = {}
+for x in range(1,w*h):
+    rooms['outfile_{}'.format(x)]=  '../data/custom_S3DIS/data/Area_1/crop_{}.txt'.format(x)
+
+
+# In[31]:
+
+
+delimiter = ' ' 
+with open(INPUT_FILE, 'r') as in_file:
+    for line in in_file:
+        X = np.array(line.split(delimiter), dtype='float32')
+        x,y,z = X[0], X[1], X[2]
+        r,g,b = X[3].astype('uint8'), X[4].astype('uint8'), X[5].astype('uint8')
+        ol, oi, rl, ri = X[6].astype('uint8'), X[7].astype('uint8'), X[8].astype('uint8'), X[9].astype('uint8')
+        if y-ymin <= 0 :
+            row = 1
+        else :
+            row = math.ceil((y-ymin)/6)
+        if x-xmin <= 0 :
+            col = 1
+        else :
+            col = math.ceil((x-xmin)/6)
+        
+        outfile = rooms['outfile_{}'.format(w*(row-1)+col)]
+        with open(outfile, 'a') as out_file:
+            out_file.write(str(x)+' '+str(y)+' '+str(z)+' '+str(r)+' '+str(g)+' '+str(b)+' '+str(ol)+' '+str(oi)+' '+str(rl)+' '+str(ri)+'\n' )
+            out_file.close()
+
+
+# In[5]:
+
+
+for number in range(1,7):
+    INPUT_FILE = '../s3dis_full/Area_{}.txt'.format(number) 
+    print(INPUT_FILE)
+    cloud = open3d.read_point_cloud(INPUT_FILE,  format='xyz')
+
+    minbox = cloud.get_min_bound()
+    maxbox = cloud.get_max_bound()
+
+    xmin = minbox[0]
+    ymin = minbox[1]
+    xmax = maxbox[0]
+    ymax = maxbox[1]
+
+    w = math.ceil((xmax-xmin)/6)
+    h = math.ceil((ymax-ymin)/6)
+    print(' width : {} ; height : {}'.format(w,h))
+
+    rooms = {}
+    for x in range(1,w*h+1):
+        rooms['outfile_{}'.format(x)]=  '../data/custom_S3DIS/data/Area_{}/crop_{}.txt'.format(number, x)
+
+    delimiter = ' ' 
+    with open(INPUT_FILE, 'r') as in_file:
+        for line in in_file:
+            X = np.array(line.split(delimiter), dtype='float32')
+            x,y,z = X[0], X[1], X[2]
+            r,g,b = X[3].astype('uint8'), X[4].astype('uint8'), X[5].astype('uint8')
+            ol, oi, rl, ri = X[6].astype('uint8'), X[7].astype('uint8'), X[8].astype('uint8'), X[9].astype('uint8')
+            if y-ymin <= 0 :
+                row = 1
+            else :
+                row = math.ceil((y-ymin)/6)
+            if x-xmin <= 0 :
+                col = 1
+            else :
+                col = math.ceil((x-xmin)/6)
+
+            outfile = rooms['outfile_{}'.format(w*(row-1)+col)]
+            with open(outfile, 'a') as out_file:
+                out_file.write(str(x)+' '+str(y)+' '+str(z)+' '+str(r)+' '+str(g)+' '+str(b)+' '+str(ol)+' '+str(oi)+' '+str(rl)+' '+str(ri)+'\n' )
+                out_file.close()
+
+
+# In[ ]:
+
+
+area = np.genfromtxt(INPUT_FILE, delimiter=' ')
+
+xyz = np.array(area[:, 0:3], dtype='float32')
+rgb = np.array(area[:, 3:6], dtype='uint8')
+object_label = np.array(area[:, 6], dtype='uint8')
+object_id = np.array(area[:, 7], dtype='uint8')
+room_label = np.array(area[:, 8], dtype='uint8')
+room_id = np.array(area[:, 9], dtype='uint8')
+
+
+# In[ ]:
+
+
+nRows = area.shape[0]
+
+for i in range(nRows):
+    x,y,z = xyz[i,0], xyz[i,1], xyz[i,2]
+    r,g,b = rgb[i,0], rgb[i,1], rgb[i,2]
+    ol, oi, rl, rl = object_label[i], object_id[i], room_label[i], room_id[i]
+    row = math.ceil(y-ymin/6)
+    col = math.ceil(x-xmin/6)
+    outfile = rooms['outfile_{}'.format(w*(row-1)+col)]
+    with open(outfile, 'a') as outfile:
+        out_file.write(x+' '+y+' '+z+' '+r+' '+g+' '+b+' '+ol+' '+oi+' '+rl+' '+ri+'\n' )
+
+
+# In[20]:
 
 
 # generating 6x6 'rooms' by dividing the point cloud according to a grid
@@ -206,13 +328,13 @@ while ymin < maxbox[1]:
     while xmin < maxbox[0]:
         n += 1
         crop = open3d.crop_point_cloud(cloud,[xmin,ymin,floor - ROOF_CEILING_PADDING],[xmin+6, ymin+6, ceiling + ROOF_CEILING_PADDING])
-        open3d.write_point_cloud('../data/custom_S3DIS/Area_5/crop_{}.ply'.format(n), crop)
+        open3d.write_point_cloud('../data/custom_S3DIS/data/Area_1/crop_{}.ply'.format(n), crop)
         xmin += 6
     ymin += 6
         
 
 
-# In[27]:
+# In[21]:
 
 
 n
