@@ -187,7 +187,9 @@ class CustomS3DISDataset:
             'stairs': 13
         }
     
-    def get_info(self,edge_attribs,pc_attribs):
+    def get_info(self,args):
+        edge_attribs = args.edge_attribs
+        pc_attribs = args.pc_attribs
         edge_feats = 0
         for attrib in edge_attribs.split(','):
             a = attrib.split('/')[0]
@@ -202,6 +204,7 @@ class CustomS3DISDataset:
             'classes': 14,
             'inv_class_map': {value:key for (key,value) in self.labels.items()},
         }
+    
     
     def get_datasets(self, args, test_seed_offset=0):
         """ Gets training and test datasets. """

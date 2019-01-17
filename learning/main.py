@@ -33,6 +33,9 @@ import graphnet
 import pointnet
 import metrics
 
+sys.path.append('./providers')
+from datasets import *
+
 
 def main():
     parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs')
@@ -131,18 +134,14 @@ def main():
         import s3dis_dataset
         dbinfo = s3dis_dataset.get_info(args)
         create_dataset = s3dis_dataset.get_datasets
-        
-        
-    elif data_to_test == 'custom_s3dis':
-        sys.path.append('./providers')
-        from datasets import *
+
+    elif args.dataset == 'custom_s3dis':
         s3dis_data = CustomS3DISDataset()
         args.ROOT_PATH = 'data/custom_S3DIS'
         s3dis_data.preprocess_pointclouds(args.ROOT_PATH)
         dbinfo = s3dis_data.get_info(args)
         create_dataset = s3dis_data.get_datasets
-        
-        
+         
     elif args.dataset=='custom_dataset':
         import custom_dataset #<- to write!
         dbinfo = custom_dataset.get_info(args)
@@ -393,7 +392,6 @@ def filter_valid(output, target, other=None):
     
 def meter_value(meter):   
     return meter.value()[0] if meter.n>0 else 0
-
 
 if __name__ == "__main__": 
     main()
