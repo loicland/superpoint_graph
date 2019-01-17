@@ -230,7 +230,7 @@ class CustomS3DISDataset:
                tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in testlist],
                                         functools.partial(spg.loader, train=False, args=args, db_path=args.ROOT_PATH, test_seed_offset=test_seed_offset))
 
-    def read_custom_s3dis_format(raw_path, label_out=True):
+    def read_custom_s3dis_format(self, raw_path, label_out=True):
     #S3DIS specific
         """extract data from a room folder"""
         room_ver = genfromtxt(raw_path, delimiter=' ')
