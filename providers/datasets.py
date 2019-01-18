@@ -206,7 +206,7 @@ class CustomS3DISDataset:
             'inv_class_map': {value:key for (key,value) in self.labels.items()},
         }
     
-    def get_datasets(self, args, test_seed_offset=0, single_file = False, filename ='', folder_s = '' ):
+    def get_datasets(self, args, test_seed_offset=0):
         """ Gets training and test datasets. """
         # Load superpoints graphs
         testlist, trainlist = [], []
@@ -247,7 +247,7 @@ class CustomS3DISDataset:
             xyz = xyz  - np.min(xyz,axis=0,keepdims=True)
             return xyz, rgb, room_labels
     
-    def preprocess_pointclouds(self,ROOT_PATH, single_file = False, filename = '', folder= ''):
+    def preprocess_pointclouds(self,ROOT_PATH):
         """ Preprocesses data by splitting them by components and normalizing."""
         for n,folder in enumerate(self.folders):
             pathP = os.path.join(ROOT_PATH,'parsed',folder)
