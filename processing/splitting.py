@@ -5,7 +5,7 @@
 
 # ## Import
 
-# In[1]:
+# In[2]:
 
 
 import sys
@@ -138,7 +138,7 @@ def create_histogram(o3dcloud, bin_size=0.1, axis =2):
 
 # ## Loading Entire Point Cloud
 
-# In[ ]:
+# In[6]:
 
 
 #INPUT_FILE = '../data/TEST/data/test/room_1900.ply'
@@ -147,8 +147,9 @@ def create_histogram(o3dcloud, bin_size=0.1, axis =2):
 #INPUT_FILE = '../data/weWork/data/demo/helix_san_mateo_lvl2_03_clean.laz' 
 #cloud, header = las_to_open3d(INPUT_FILE)
 
-INPUT_FILE = '../s3dis_full/Area_1.txt' #'../data/custom_S3DIS/data/Area_1/crop_9.txt'
+INPUT_FILE = '../data/helix_bis/data/test/crop_11.txt' #'../data/custom_S3DIS/data/Area_1/crop_9.txt'
 cloud = open3d.read_point_cloud(INPUT_FILE,  format='xyz') # when reading from .txt files 
+open3d.write_point_cloud('../data/helix_bis/data/test/crop_11.ply', cloud)
 
 
 # ## downsizing it (if too massive)
@@ -338,4 +339,65 @@ while ymin < maxbox[1]:
 
 
 n
+
+
+# ## Normalizing rooms
+# 
+
+# In[3]:
+
+
+INPUT_FILE = '../data/TEST/data/test/test_02.ply' #'../data/custom_S3DIS/data/Area_1/crop_9.txt' superpoint_graph/data/helix_bis/data/test/crop_13-Copy1.ply
+cloud = open3d.read_point_cloud(INPUT_FILE) # when reading from .txt files 
+#open3d.write_point_cloud('../data/helix/data/test/crop_12_NA.ply', cloud)
+
+
+# In[4]:
+
+
+# Align x,y,z with  origin
+pts = np.asarray(cloud.points)
+pts = pts  - np.min(pts,axis=0,keepdims=True) 
+
+
+# In[8]:
+
+
+pts[:,:2] = (pts[:,:2] - np.min(pts[:,:2],axis=0,keepdims=True) )/(np.max(pts[:,:2],axis=0,keepdims=True)  - np.min(pts[:,:2],axis=0,keepdims=True) ) - 0.5
+
+
+# In[26]:
+
+
+# Normalizing x, y between -0.5 and 0.5
+x_min = np.min(pts[:,0])
+x_max = np.max(pts[:,0])
+y_min = np.min(pts[:,1])
+y_max = np.max(pts[:,1])
+
+
+# In[27]:
+
+
+pts[:,0] = (pts[:,0] - x_min)/(x_max - x_min) - 0.5
+pts[:,1] = (pts[:,1] - y_min)/(y_max - y_min) - 0.5
+
+
+# In[9]:
+
+
+for i in range(pts.shape[1]):
+    print("Feature "+ str(i)+"; Min: " + str(np.min(pts[:,i])) + "; Max: " + str(np.max(pts[:,i]) ))
+
+
+# In[40]:
+
+
+cloud.points = open3d.Vector3dVector(pts)
+
+
+# In[42]:
+
+
+open3d.write_point_cloud('../data/helix/data/test/crop_12.ply', cloud)
 
