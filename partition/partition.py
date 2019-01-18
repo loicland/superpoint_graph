@@ -84,19 +84,21 @@ for folder in folders:
     if not os.path.isdir(spg_folder):
         os.mkdir(spg_folder)
     
-    if args.dataset=='s3dis' or args.dataset=='custom_s3dis':    
+    if args.dataset=='s3dis':
         files = [os.path.join(data_folder, o) for o in os.listdir(data_folder) 
                 if os.path.isdir(os.path.join(data_folder,o))]
     elif args.dataset=='sema3d':
         files = glob.glob(data_folder+"*.txt")
     elif 'helix' in args.dataset.lower():
         files = glob.glob(os.path.join(data_folder,'*'+helix_data.extension))
+    elif args.dataset=='custom_s3dis':
+        files = glob.glob(os.path.join(data_folder+'*'+s3dis_data.extension))
     elif args.dataset=='custom_dataset':
         #list all ply files in the folder
         files = glob.glob(data_folder+"*.ply")
         #list all las files in the folder
         files = glob.glob(data_folder+"*.las")
-        
+    
     if (len(files) == 0):
         raise ValueError('%s is empty' % data_folder)
         
@@ -161,12 +163,11 @@ for folder in folders:
                     xyz = libply_c.prune(xyz, args.voxel_width, np.zeros(xyz.shape,dtype='u1'), np.array(1,dtype='u1'), 0)[0]
                 labels = []
                 rgb = []
-                
             elif args.dataset=='custom_s3dis':
                 xyz, rgb, labels = s3dis_data.read_custom_s3dis_format(data_file)
                 if args.voxel_width > 0:
                     xyz, rgb, labels = libply_c.prune(xyz, args.voxel_width, rgb, labels, n_labels)
-            
+                rgb = []
             elif args.dataset=='custom_dataset':
                 #implement in provider.py your own read_custom_format outputing xyz, rgb, labels
                 #example for ply files
