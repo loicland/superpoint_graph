@@ -134,14 +134,11 @@ def main():
         import s3dis_dataset
         dbinfo = s3dis_dataset.get_info(args)
         create_dataset = s3dis_dataset.get_datasets
-
     elif args.dataset == 'custom_s3dis':
         s3dis_data = CustomS3DISDataset()
-        args.ROOT_PATH = 'data/custom_S3DIS'
-        s3dis_data.preprocess_pointclouds(args.ROOT_PATH)
+        s3dis_data.preprocess_pointclouds(args.S3DIS_PATH)
         dbinfo = s3dis_data.get_info(args)
         create_dataset = s3dis_data.get_datasets
-         
     elif args.dataset=='custom_dataset':
         import custom_dataset #<- to write!
         dbinfo = custom_dataset.get_info(args)
@@ -332,7 +329,7 @@ def main():
 
 
 
-  
+
 def resume(args, dbinfo):
     """ Loads model and optimizer state from a previous checkpoint. """
     print("=> loading checkpoint '{}'".format(args.resume))
