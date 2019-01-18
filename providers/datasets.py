@@ -34,6 +34,7 @@ class HelixDataset:
             'sofa': 10,
             'board': 11,
             'clutter': 12
+            'stairs': 13
         }
     
     def get_info(self,edge_attribs,pc_attribs):
@@ -48,7 +49,7 @@ class HelixDataset:
         return {
             'node_feats': 14 if pc_attribs=='' else len(pc_attribs),
             'edge_feats': edge_feats,
-            'classes': 13,
+            'classes': 14,
             'inv_class_map': {value:key for (key,value) in self.labels.items()},
         }
     
@@ -205,9 +206,8 @@ class CustomS3DISDataset:
             'inv_class_map': {value:key for (key,value) in self.labels.items()},
         }
     
-    
-    """def get_datasets(self, args, test_seed_offset=0):
-         #Gets training and test datasets.
+    def get_datasets(self, args, test_seed_offset=0, single_file = False, filename ='', folder_s = '' ):
+        """ Gets training and test datasets. """
         # Load superpoints graphs
         testlist, trainlist = [], []
         for folder in self.folders:
@@ -215,39 +215,6 @@ class CustomS3DISDataset:
             for fname in sorted(os.listdir(path)):
                 if fname.endswith(".h5"):
                     testlist.append(spg.spg_reader(args, path + fname, True))
-        
-        # Load training data for normalisation purposes mainly
-        for n in range(1,7):
-            if n != args.cvfold:
-                path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, n)
-                for fname in sorted(os.listdir(path)):
-                    if fname.endswith(".h5"):
-                        trainlist.append(spg.spg_reader(args, path + fname, True))
-
-        # Normalize edge features
-        if args.spg_attribs01:
-            trainlist, testlist = spg.scaler01(trainlist, testlist)
-
-        return tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in trainlist],
-                                        functools.partial(spg.loader, train=True, args=args, db_path=args.ROOT_PATH)), \
-               tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in testlist],
-                                        functools.partial(spg.loader, train=False, args=args, db_path=args.ROOT_PATH, test_seed_offset=test_seed_offset))"""
-
-    
-    def get_datasets(self, args, test_seed_offset=0, single_file = False, filename ='', folder_s = '' ):
-        """ Gets training and test datasets. """
-        # Load superpoints graphs
-        testlist, trainlist = [], []
-        if not single_file :
-            for folder in self.folders:
-                path = os.path.join(args.ROOT_PATH,'superpoint_graphs',folder)
-                for fname in sorted(os.listdir(path)):
-                    if fname.endswith(".h5"):
-                        testlist.append(spg.spg_reader(args, path + fname, True))
-        else :
-            path = os.path.join(args.ROOT_PATH,'superpoint_graphs',folder_s)
-            if filename.endswith(".h5"):
-                testlist.append(spg.spg_reader(args, path + filename, True))
            
         # Load training data for normalisation purposes mainly
         for n in range(1,7):
@@ -276,17 +243,12 @@ class CustomS3DISDataset:
             if not label_out:
                 return xyz, rgb
             room_labels = np.array(room_ver[:, 6], dtype='uint8')
+            # Align x,y,z with origin
+            xyz = xyz  - np.min(xyz,axis=0,keepdims=True)
             return xyz, rgb, room_labels
-        elif raw_path[-4:] == '.ply':
-            cloud = o3d.read_point_cloud(raw_path)
-            # Align x,y,z with  origin
-            pts = np.asarray(cloud.points)
-            #pts = pts  - np.min(pts,axis=0,keepdims=True) 
-            return pts
-        
     
-    """def preprocess_pointclouds(self,ROOT_PATH):
-        #Preprocesses data by splitting them by components and normalizing.
+    def preprocess_pointclouds(self,ROOT_PATH, single_file = False, filename = '', folder= ''):
+        """ Preprocesses data by splitting them by components and normalizing."""
         for n,folder in enumerate(self.folders):
             pathP = os.path.join(ROOT_PATH,'parsed',folder)
             pathD = os.path.join(ROOT_PATH,'features',folder)
@@ -304,7 +266,7 @@ class CustomS3DISDataset:
                     # rescale to [-0.5,0.5]; keep xyz
                     elpsv[:,0] = elpsv[:,0] / np.max(elpsv[:,0]) - 0.5 
                     elpsv[:,1:] -= 0.5
-                    
+
                     rgb = np.zeros((xyz.shape[0],3))
                     P = np.concatenate([xyz, rgb,elpsv], axis=1)
 
@@ -318,70 +280,4 @@ class CustomS3DISDataset:
                                 ii = random.sample(range(idx.size), k=10000)
                                 idx = idx[ii]
 
-                            hf.create_dataset(name='{:d}'.format(c), data=P[idx,...])"""
-    
-    def preprocess_pointclouds(self,ROOT_PATH, single_file = False, filename = '', folder= ''):
-        """ Preprocesses data by splitting them by components and normalizing."""
-        if not single_file :
-            for n,folder in enumerate(self.folders):
-                pathP = os.path.join(ROOT_PATH,'parsed',folder)
-                pathD = os.path.join(ROOT_PATH,'features',folder)
-                pathC = os.path.join(ROOT_PATH,'superpoint_graphs',folder)
-                if not os.path.exists(pathP):
-                    os.makedirs(pathP)
-                random.seed(n)
-                for file in os.listdir(pathC):
-                    print(file)
-                    if file.endswith(".h5"):
-                        f = h5py.File(pathD + file, 'r')
-                        xyz = f['xyz'][:]
-                        elpsv = np.stack([ f['xyz'][:,2][:], f['linearity'][:], f['planarity'][:], f['scattering'][:], f['verticality'][:] ], axis=1)
-
-                        # rescale to [-0.5,0.5]; keep xyz
-                        elpsv[:,0] = elpsv[:,0] / np.max(elpsv[:,0]) - 0.5 
-                        elpsv[:,1:] -= 0.5
-
-                        rgb = np.zeros((xyz.shape[0],3))
-                        P = np.concatenate([xyz, rgb,elpsv], axis=1)
-
-                        f = h5py.File(os.path.join(pathC, file), 'r')
-                        numc = len(f['components'].keys())
-
-                        with h5py.File(os.path.join(pathP, file), 'w') as hf:
-                            for c in range(numc):
-                                idx = f['components/{:d}'.format(c)][:].flatten()
-                                if idx.size > 10000: # trim extra large segments, just for speed-up of loading time
-                                    ii = random.sample(range(idx.size), k=10000)
-                                    idx = idx[ii]
-
-                                hf.create_dataset(name='{:d}'.format(c), data=P[idx,...])
-        else :
-            pathP = os.path.join(ROOT_PATH,'parsed',folder)
-            pathD = os.path.join(ROOT_PATH,'features',folder)
-            pathC = os.path.join(ROOT_PATH,'superpoint_graphs',folder)
-            if not os.path.exists(pathP):
-                os.makedirs(pathP)
-            file = filename
-            print(file)
-            if file.endswith(".h5"):
-                f = h5py.File(pathD + file, 'r')
-                xyz = f['xyz'][:]
-                elpsv = np.stack([ f['xyz'][:,2][:], f['linearity'][:], f['planarity'][:], f['scattering'][:], f['verticality'][:] ], axis=1)
-                # rescale to [-0.5,0.5]; keep xyz
-                elpsv[:,0] = elpsv[:,0] / np.max(elpsv[:,0]) - 0.5 
-                elpsv[:,1:] -= 0.5
-
-                rgb = np.zeros((xyz.shape[0],3))
-                P = np.concatenate([xyz, rgb,elpsv], axis=1)
-
-                f = h5py.File(os.path.join(pathC, file), 'r')
-                numc = len(f['components'].keys())
-
-                with h5py.File(os.path.join(pathP, file), 'w') as hf:
-                    for c in range(numc):
-                        idx = f['components/{:d}'.format(c)][:].flatten()
-                        if idx.size > 10000: # trim extra large segments, just for speed-up of loading time
-                            ii = random.sample(range(idx.size), k=10000)
-                            idx = idx[ii]
-
-                        hf.create_dataset(name='{:d}'.format(c), data=P[idx,...])  
+                            hf.create_dataset(name='{:d}'.format(c), data=P[idx,...])
