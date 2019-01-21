@@ -583,20 +583,19 @@ class PointCloudSegmentation(object):
             create_dataset = s3dis_dataset.get_datasets
         elif self._dataset == 'helix':
             HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, single_file = True, filename = file_name, folder = folder)
-            create_dataset = HelixDataset().get_datasets
+            create_data = HelixDataset().get_data
             
         collected = defaultdict(list)
-        for ss in range(self._args.test_multisamp_n):
-            eval_data = create_dataset(self._args, ss, filename = file_name, folder_s = folder)[1]
-            loader = torch.utils.data.DataLoader(eval_data, batch_size=1, collate_fn=spg.eccpc_collate, num_workers=8)
-            for bidx, (targets, GIs, clouds_data) in enumerate(loader):
-                self._model.ecc.set_info(GIs, self._args.cuda)
-                label_mode_cpu, label_vec_cpu, segm_size_cpu = targets[:,0], targets[:,2:], targets[:,1:].sum(1).float()
-                data = clouds_data
-                embeddings = self._cloud_embedder.run(self._model, *clouds_data)
-                outputs = self._model.ecc(embeddings)
-                fname = clouds_data[0][0][:clouds_data[0][0].rfind('.')]
-                collected[fname].append((outputs.data.cpu().numpy(), label_mode_cpu.numpy(), label_vec_cpu.numpy()))
+        eval_data = create_data(self._args, filename = file_name, folder_s = folder)[1]
+        loader = torch.utils.data.DataLoader(eval_data, batch_size=1, collate_fn=spg.eccpc_collate, num_workers=8)
+        for bidx, (targets, GIs, clouds_data) in enumerate(loader):
+            self._model.ecc.set_info(GIs, self._args.cuda)
+            label_mode_cpu, label_vec_cpu, segm_size_cpu = targets[:,0], targets[:,2:], targets[:,1:].sum(1).float()
+            data = clouds_data
+            embeddings = self._cloud_embedder.run(self._model, *clouds_data)
+            outputs = self._model.ecc(embeddings)
+            fname = clouds_data[0][0][:clouds_data[0][0].rfind('.')]
+            collected[fname].append((outputs.data.cpu().numpy(), label_mode_cpu.numpy(), label_vec_cpu.numpy()))
         predictions = {}
         with h5py.File(os.path.join(self._args.ROOT_PATH, os.path.splitext(os.path.basename(file))[0] +'_predictions.h5'), 'w') as hf:
             for fname,output in collected.items():
@@ -678,15 +677,15 @@ model.load_model()
 
 # ## Segment the Point Cloud
 
-# In[ ]:
+# In[6]:
 
 
-xyz, xyz_labels = model.process('data/TEST/data/test/test_03.ply') #set save_model to True if you want to write out the segmented point cloud. 
+xyz, xyz_labels = model.process('data/TEST/data/test/test_02.ply') #set save_model to True if you want to write out the segmented point cloud. 
 
 
 # ## Or reading an existing file
 
-# In[14]:
+# In[ ]:
 
 
 xyz, xyz_labels = model.load_prediction('data/TEST', 'test/test_01', 'test_01_predictions.h5')
