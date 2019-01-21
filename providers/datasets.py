@@ -83,10 +83,18 @@ class HelixDataset:
         path = os.path.join(args.ROOT_PATH,'superpoint_graphs',folder_s)
         if filename.endswith(".h5"):
             testlist.append(spg.spg_reader(args, path + filename, True))
-
+            
+        # need to load the whole training set if we want to normalize the edge feature wrt to the stats of the training set.
+        for n in range(1,7):
+            if n != args.cvfold:
+                path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, n)
+                for fname in sorted(os.listdir(path)):
+                    if fname.endswith(".h5"):
+                        trainlist.append(spg.spg_reader(args, path + fname, True))
+                        
         # Normalize edge features
         if args.spg_attribs01:
-            _, testlist = spg.scaler01(testlist, testlist)
+            _, testlist = spg.scaler01(trainlist, testlist)
 
         return tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in trainlist],
                                         functools.partial(spg.loader, train=True, args=args, db_path=args.ROOT_PATH)), \
