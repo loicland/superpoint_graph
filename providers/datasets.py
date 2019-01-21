@@ -106,12 +106,12 @@ class HelixDataset:
                         elpsv[:,0] = elpsv[:,0] / np.max(elpsv[:,0]) - 0.5 
                         elpsv[:,1:] -= 0.5
 
-                        if pc_attribs == 'xyzelspvXYZ':
+                        if pc_attribs == 'xyzelpsvXYZ':
                             ma, mi = np.max(xyz,axis=0,keepdims=True), np.min(xyz,axis=0,keepdims=True)
                             xyzn = (xyz - mi) / (ma - mi + 1e-8)   # as in PointNet ("normalized location as to the room (from 0 to 1)")
                             rgb = np.zeros((xyz.shape[0],3))
                             P = np.concatenate([xyz, rgb,elpsv, xyzn], axis=1)
-                        elif pc_attribs == 'xyzelspv':
+                        elif pc_attribs == 'xyzelpsv':
                             rgb = np.zeros((xyz.shape[0],3))
                             P = np.concatenate([xyz, rgb,elpsv], axis=1)
 
@@ -147,7 +147,7 @@ class HelixDataset:
                     xyzn = (xyz - mi) / (ma - mi + 1e-8)   # as in PointNet ("normalized location as to the room (from 0 to 1)")
                     rgb = np.zeros((xyz.shape[0],3))
                     P = np.concatenate([xyz, rgb,elpsv, xyzn], axis=1)
-                elif pc_attribs == 'xyzelspv':
+                elif pc_attribs == 'xyzelpsv':
                     rgb = np.zeros((xyz.shape[0],3))
                     P = np.concatenate([xyz, rgb,elpsv], axis=1)
                 
@@ -261,12 +261,12 @@ class CustomS3DISDataset:
                     elpsv[:,0] = elpsv[:,0] / np.max(elpsv[:,0]) - 0.5 
                     elpsv[:,1:] -= 0.5
 
-                    if pc_attribs == 'xyzelspvXYZ':
+                    if pc_attribs == 'xyzelpsvXYZ':
                         ma, mi = np.max(xyz,axis=0,keepdims=True), np.min(xyz,axis=0,keepdims=True)
                         xyzn = (xyz - mi) / (ma - mi + 1e-8)   # as in PointNet ("normalized location as to the room (from 0 to 1)")
                         rgb = np.zeros((xyz.shape[0],3))
                         P = np.concatenate([xyz, rgb,elpsv, xyzn], axis=1)
-                    elif pc_attribs == 'xyzelspv':
+                    elif pc_attribs == 'xyzelpsv':
                         rgb = np.zeros((xyz.shape[0],3))
                         P = np.concatenate([xyz, rgb,elpsv], axis=1)
 

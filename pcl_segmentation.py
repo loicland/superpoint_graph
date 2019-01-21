@@ -313,7 +313,7 @@ def visualise(root_path, filename, predictions):
 
 # # **Regrouping in a Class**
 
-# In[3]:
+# In[2]:
 
 
 class PointCloudSegmentation(object):
@@ -655,18 +655,18 @@ class PointCloudSegmentation(object):
 
 # ## Initialize the model
 
-# In[12]:
+# In[16]:
 
 
-MODEL_PATH = 'results/s3dis/bw/cv1_3/model.pth.tar'
-model_config = 'gru_10_0,f_14'
+MODEL_PATH = 'results/s3dis/bw/cv1/model.pth.tar'
+model_config = 'gru_10_0,f_13'
 edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d'
-#pc_attribs = 'xyzelspvXYZ'
-pc_attribs = 'xyzelspv'
+pc_attribs = 'xyzelpsvXYZ'
+#pc_attribs = 'xyzelpsv'
 dataset = 'helix'
 
 
-# In[13]:
+# In[17]:
 
 
 model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs, dataset)
@@ -675,7 +675,7 @@ model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attrib
 # 
 # ## Load the Weights
 
-# In[14]:
+# In[18]:
 
 
 model.load_model()
@@ -683,7 +683,7 @@ model.load_model()
 
 # ## Segment the Point Cloud
 
-# In[17]:
+# In[11]:
 
 
 xyz, xyz_labels = model.process('data/TEST/data/test/test_02.ply') #set save_model to True if you want to write out the segmented point cloud. 
@@ -699,7 +699,7 @@ xyz, xyz_labels = model.load_prediction('data/TEST', 'test/test_02', 'test_02_pr
 
 # ## Visualisation
 
-# In[18]:
+# In[12]:
 
 
 model.display(xyz, xyz_labels)
