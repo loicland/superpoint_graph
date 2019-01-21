@@ -248,7 +248,7 @@ class CustomS3DISDataset:
                 os.makedirs(pathP)
             random.seed(n)
             for file in os.listdir(pathC):
-                print(file)
+                print(folder+file)
                 if file.endswith(".h5"):
                     f = h5py.File(pathD + file, 'r')
                     xyz = f['xyz'][:]

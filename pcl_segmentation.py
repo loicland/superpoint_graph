@@ -313,7 +313,7 @@ def visualise(root_path, filename, predictions):
 
 # # **Regrouping in a Class**
 
-# In[7]:
+# In[8]:
 
 
 class PointCloudSegmentation(object):
@@ -352,7 +352,7 @@ class PointCloudSegmentation(object):
         elif self._dataset == 'helix':
             dataset_info = HelixDataset().get_info(self._edge_attribs,self._pc_attribs)
         
-        for i_label in range(0, n_labels+1):
+        for i_label in range(n_labels):
             cloud = xyz[np.where(xyz_labels == i_label)]
             # converting simple array to open3d.PointCloud object
             pcd = o3d.PointCloud()
@@ -360,7 +360,7 @@ class PointCloudSegmentation(object):
             if len(pcd.points) != 0 :
                 clouds.append(pcd)
                 labels.append(dataset_info['inv_class_map'][i_label])
-                colors.append(provider.get_color_from_label(i_label+1, self._dataset))
+                colors.append(provider.get_color_from_label(i_label, self._dataset))
         
         colors = np.asarray(colors)/255
         display_cloud(clouds = clouds, labels = labels, colors = colors)
@@ -586,7 +586,6 @@ class PointCloudSegmentation(object):
             HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, single_file = True, filename = file_name, folder = folder)
             create_data = HelixDataset().get_data
         
-        print(root)
         if not os.path.isdir(root + "/predictions"):
                 os.mkdir(root + "/predictions")
         pred_folder = root   + "/predictions/" + folder
@@ -639,7 +638,6 @@ class PointCloudSegmentation(object):
         else:
             graph_spg, components, in_component = provider.read_spg(spg_file)
         
-        print(predictions.keys())
         pred_red  = predictions[filename]        
         if (len(pred_red) != len(components)):
             raise ValueError("It looks like the spg is not adapted to the result file") 
@@ -657,7 +655,7 @@ class PointCloudSegmentation(object):
 
 # ## Initialize the model
 
-# In[8]:
+# In[9]:
 
 
 MODEL_PATH = 'results/s3dis/bw/cv1_3/model.pth.tar'
@@ -668,7 +666,7 @@ pc_attribs = 'xyzelspv'
 dataset = 'helix'
 
 
-# In[9]:
+# In[10]:
 
 
 model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs, dataset)
@@ -677,7 +675,7 @@ model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attrib
 # 
 # ## Load the Weights
 
-# In[10]:
+# In[11]:
 
 
 model.load_model()
@@ -685,23 +683,23 @@ model.load_model()
 
 # ## Segment the Point Cloud
 
-# In[6]:
+# In[12]:
 
 
-xyz, xyz_labels = model.process('data/TEST/data/test/test_00.ply') #set save_model to True if you want to write out the segmented point cloud. 
+xyz, xyz_labels = model.process('data/TEST/data/test/test_02.ply') #set save_model to True if you want to write out the segmented point cloud. 
 
 
 # ## Or reading an existing file
 
-# In[12]:
+# In[6]:
 
 
-xyz, xyz_labels = model.load_prediction('data/TEST', 'test/test_00', 'test_00_predictions.h5')
+xyz, xyz_labels = model.load_prediction('data/TEST', 'test/test_02', 'test_02_predictions.h5')
 
 
 # ## Visualisation
 
-# In[13]:
+# In[12]:
 
 
 model.display(xyz, xyz_labels)
