@@ -313,7 +313,7 @@ def visualise(root_path, filename, predictions):
 
 # # **Regrouping in a Class**
 
-# In[2]:
+# In[7]:
 
 
 class PointCloudSegmentation(object):
@@ -386,8 +386,8 @@ class PointCloudSegmentation(object):
     def load_prediction(self, root_path, filename, prediction_file):
         """ load the predictions from a file
         root_path : relative path to the data folder (containing features, superpoint graph... folders)
-        filename : name of the file without the extension
-        prediction_file : name of the prediction file
+        filename : filename without the extension and its parent directory. ex : if test_01.ply in in directory test : test\test_01
+        prediction_file : name of the prediction file : ex test_01_predictions.h5
         """
         n_labels = 14
 
@@ -398,8 +398,9 @@ class PointCloudSegmentation(object):
         fea_file   = os.path.join(root_path,'features',folder,file_name + '.h5')
         spg_file   = os.path.join(root_path,'superpoint_graphs',folder,file_name + '.h5')
         ply_folder = os.path.join(root_path,'clouds',folder)
+        #pred_folder = os.path.join(root_path,'predictions',folder)
         ply_file   = os.path.join(ply_folder,file_name)
-        res_file   = os.path.join(root_path, prediction_file)
+        res_file   = os.path.join(root_path,'predictions', folder, prediction_file)
 
         if not os.path.isdir(ply_folder ):
             os.mkdir(ply_folder)
@@ -584,6 +585,13 @@ class PointCloudSegmentation(object):
         elif self._dataset == 'helix':
             HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, single_file = True, filename = file_name, folder = folder)
             create_data = HelixDataset().get_data
+        
+        print(root)
+        if not os.path.isdir(root + "/predictions"):
+                os.mkdir(root + "/predictions")
+        pred_folder = root   + "/predictions/" + folder
+        if not os.path.isdir(pred_folder):
+                os.mkdir(pred_folder)
             
         collected = defaultdict(list)
         eval_data = create_data(self._args, filename = file_name, folder_s = folder)[1]
@@ -597,7 +605,7 @@ class PointCloudSegmentation(object):
             fname = clouds_data[0][0][:clouds_data[0][0].rfind('.')]
             collected[fname].append((outputs.data.cpu().numpy(), label_mode_cpu.numpy(), label_vec_cpu.numpy()))
         predictions = {}
-        with h5py.File(os.path.join(self._args.ROOT_PATH, os.path.splitext(os.path.basename(file))[0] +'_predictions.h5'), 'w') as hf:
+        with h5py.File(os.path.join(pred_folder, os.path.splitext(os.path.basename(file))[0] +'_predictions.h5'), 'w') as hf:
             for fname,output in collected.items():
                 o_cpu, t_cpu, tvec_cpu = list(zip(*output))
                 o_cpu = np.mean(np.stack(o_cpu,0),0)
@@ -649,7 +657,7 @@ class PointCloudSegmentation(object):
 
 # ## Initialize the model
 
-# In[3]:
+# In[8]:
 
 
 MODEL_PATH = 'results/s3dis/bw/cv1_3/model.pth.tar'
@@ -660,7 +668,7 @@ pc_attribs = 'xyzelspv'
 dataset = 'helix'
 
 
-# In[4]:
+# In[9]:
 
 
 model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs, dataset)
@@ -669,7 +677,7 @@ model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attrib
 # 
 # ## Load the Weights
 
-# In[5]:
+# In[10]:
 
 
 model.load_model()
@@ -680,20 +688,20 @@ model.load_model()
 # In[6]:
 
 
-xyz, xyz_labels = model.process('data/TEST/data/test/test_02.ply') #set save_model to True if you want to write out the segmented point cloud. 
+xyz, xyz_labels = model.process('data/TEST/data/test/test_00.ply') #set save_model to True if you want to write out the segmented point cloud. 
 
 
 # ## Or reading an existing file
 
-# In[ ]:
+# In[12]:
 
 
-xyz, xyz_labels = model.load_prediction('data/TEST', 'test/test_01', 'test_01_predictions.h5')
+xyz, xyz_labels = model.load_prediction('data/TEST', 'test/test_00', 'test_00_predictions.h5')
 
 
 # ## Visualisation
 
-# In[7]:
+# In[13]:
 
 
 model.display(xyz, xyz_labels)
