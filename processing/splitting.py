@@ -5,7 +5,7 @@
 
 # ## Import
 
-# In[2]:
+# In[1]:
 
 
 import sys
@@ -147,9 +147,9 @@ def create_histogram(o3dcloud, bin_size=0.1, axis =2):
 #INPUT_FILE = '../data/weWork/data/demo/helix_san_mateo_lvl2_03_clean.laz' 
 #cloud, header = las_to_open3d(INPUT_FILE)
 
-INPUT_FILE = '../data/helix_bis/data/test/crop_11.txt' #'../data/custom_S3DIS/data/Area_1/crop_9.txt'
+INPUT_FILE = '../data/custom_S3DIS/data/Area_5/crop_15.txt'
 cloud = open3d.read_point_cloud(INPUT_FILE,  format='xyz') # when reading from .txt files 
-open3d.write_point_cloud('../data/helix_bis/data/test/crop_11.ply', cloud)
+open3d.write_point_cloud('../data/TEST/data/test/crop_15.ply', cloud)
 
 
 # ## downsizing it (if too massive)
@@ -400,4 +400,26 @@ cloud.points = open3d.Vector3dVector(pts)
 
 
 open3d.write_point_cloud('../data/helix/data/test/crop_12.ply', cloud)
+
+
+# In[ ]:
+
+
+'../data/custom_S3DIS/data/Area_5/crop_15.txt'
+
+
+# ## Getting element from a point cloud
+
+# In[10]:
+
+
+INPUT_FILE = '../data/custom_S3DIS/data/Area_5/crop_15.txt'
+OUTPUT_FILE = 'crop_15b.txt'
+delimiter = ' '
+with open(OUTPUT_FILE, 'a') as out_file:
+    with open(INPUT_FILE, 'r') as in_file:
+        for line in in_file:
+            X = np.array(line.split(delimiter), dtype='float32')
+            if X[6] == 2:
+                out_file.write(line)
 
