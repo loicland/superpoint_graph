@@ -156,6 +156,8 @@ def main():
         stats = []
 
     train_dataset, test_dataset = create_dataset(args)
+    print('train dataset has {} elements'.format(len(train_dataset)))
+    print('test dataset has {} elements'.format(len(test_dataset)))
     ptnCloudEmbedder = pointnet.CloudEmbedder(args)
     scheduler = MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_decay, last_epoch=args.start_epoch-1)
 

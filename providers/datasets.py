@@ -53,29 +53,30 @@ class HelixDataset:
             'inv_class_map': {value:key for (key,value) in self.labels.items()},
         }
     
-    def get_datasets(self, args, test_seed_offset=0):
+    def get_datasets(self, args, test_seed_offset=0, filename ='', folder_s = '' ):
         """ Gets training and test datasets. """
         # Load superpoints graphs
         testlist, trainlist = [], []
+        path = os.path.join(args.ROOT_PATH,'superpoint_graphs',folder_s)
+        if filename.endswith(".h5"):
+            testlist.append(spg.spg_reader(args, path + filename, True))
+           
+        # Load training data for normalisation purposes mainly
         for n in range(1,7):
             if n != args.cvfold:
                 path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, n)
                 for fname in sorted(os.listdir(path)):
                     if fname.endswith(".h5"):
                         trainlist.append(spg.spg_reader(args, path + fname, True))
-        path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, args.cvfold)
-        for fname in sorted(os.listdir(path)):
-            if fname.endswith(".h5"):
-                testlist.append(spg.spg_reader(args, path + fname, True))
 
         # Normalize edge features
         if args.spg_attribs01:
             trainlist, testlist = spg.scaler01(trainlist, testlist)
 
         return tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in trainlist],
-                                        functools.partial(spg.loader, train=True, args=args, db_path=args.S3DIS_PATH)), \
+                                        functools.partial(spg.loader, train=True, args=args, db_path=args.ROOT_PATH)), \
                tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in testlist],
-                                        functools.partial(spg.loader, train=False, args=args, db_path=args.S3DIS_PATH, test_seed_offset=test_seed_offset))
+                                        functools.partial(spg.loader, train=False, args=args, db_path=args.ROOT_PATH, test_seed_offset=test_seed_offset))
 
 
     def read_pointcloud(self,filename):
@@ -215,7 +216,6 @@ class CustomS3DISDataset:
         for fname in sorted(os.listdir(path)):
             if fname.endswith(".h5"):
                 testlist.append(spg.spg_reader(args, path + fname, True))
-
         # Normalize edge features
         if args.spg_attribs01:
             trainlist, testlist = spg.scaler01(trainlist, testlist)
@@ -228,16 +228,15 @@ class CustomS3DISDataset:
     def read_custom_s3dis_format(self, raw_path, label_out=True):
     #S3DIS specific
         """extract data from a room folder"""
-        if raw_path[-4:] == '.txt':
-            room_ver = genfromtxt(raw_path, delimiter=' ')
-            xyz = np.array(room_ver[:, 0:3], dtype='float32')
-            rgb = np.array(room_ver[:, 3:6], dtype='uint8')
-            if not label_out:
-                return xyz, rgb
-            room_labels = np.array(room_ver[:, 6], dtype='uint8')
-            # Align x,y,z with origin
-            xyz = xyz  - np.min(xyz,axis=0,keepdims=True)
-            return xyz, rgb, room_labels
+        room_ver = genfromtxt(raw_path, delimiter=' ')
+        xyz = np.array(room_ver[:, 0:3], dtype='float32')
+        rgb = np.array(room_ver[:, 3:6], dtype='uint8')
+        if not label_out:
+            return xyz, rgb
+        room_labels = np.array(room_ver[:, 6], dtype='uint8')
+        # Align x,y,z with origin
+        xyz = xyz  - np.min(xyz,axis=0,keepdims=True)
+        return xyz, rgb, room_labels
     
     def preprocess_pointclouds(self,ROOT_PATH):
         """ Preprocesses data by splitting them by components and normalizing."""
