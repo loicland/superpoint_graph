@@ -136,7 +136,7 @@ def main():
         create_dataset = s3dis_dataset.get_datasets
     elif args.dataset == 'custom_s3dis':
         s3dis_data = CustomS3DISDataset()
-        s3dis_data.preprocess_pointclouds(args.S3DIS_PATH)
+        s3dis_data.preprocess_pointclouds(args.S3DIS_PATH, args.pc_attribs)
         dbinfo = s3dis_data.get_info(args)
         create_dataset = s3dis_data.get_datasets
     elif args.dataset=='custom_dataset':

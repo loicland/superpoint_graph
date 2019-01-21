@@ -7,7 +7,6 @@ import sys
 import torchnet as tnt
 import h5py
 import random
-from numpy import genfromtxt
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path,'../learning'))
@@ -61,17 +60,17 @@ class HelixDataset:
         if filename.endswith(".h5"):
             testlist.append(spg.spg_reader(args, path + filename, True))
             
-        # need to load the whole training set if we want to normalize the edge feature wrt to the stats of the training set.
+        """# need to load the whole training set if we want to normalize the edge feature wrt to the stats of the training set.
         for n in range(1,7):
             if n != args.cvfold:
                 path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, n)
                 for fname in sorted(os.listdir(path)):
                     if fname.endswith(".h5"):
-                        trainlist.append(spg.spg_reader(args, path + fname, True))
+                        trainlist.append(spg.spg_reader(args, path + fname, True))"""
                         
         # Normalize edge features
         if args.spg_attribs01:
-            _, testlist = spg.scaler01(trainlist, testlist)
+            _, testlist = spg.scaler01(testlist, testlist)
 
         return tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in trainlist],
                                         functools.partial(spg.loader, train=True, args=args, db_path=args.ROOT_PATH)), \
@@ -86,7 +85,7 @@ class HelixDataset:
         pts = pts  - np.min(pts,axis=0,keepdims=True) 
         return pts
     
-    def preprocess_pointclouds(self,ROOT_PATH, single_file = False, filename = '', folder= ''):
+    def preprocess_pointclouds(self,ROOT_PATH, pc_attribs, single_file = False, filename = '', folder= ''):
         """ Preprocesses data by splitting them by components and normalizing."""
         if not single_file :
             for n,folder in enumerate(self.folders):
@@ -107,12 +106,14 @@ class HelixDataset:
                         elpsv[:,0] = elpsv[:,0] / np.max(elpsv[:,0]) - 0.5 
                         elpsv[:,1:] -= 0.5
 
-                        #ma, mi = np.max(xyz,axis=0,keepdims=True), np.min(xyz,axis=0,keepdims=True)
-                        #xyzn = (xyz - mi) / (ma - mi + 1e-8)   # as in PointNet ("normalized location as to the room (from 0 to 1)")
-
-                        rgb = np.zeros((xyz.shape[0],3))
-                        #P = np.concatenate([xyz, rgb,elpsv, xyzn], axis=1)
-                        P = np.concatenate([xyz, rgb,elpsv], axis=1)
+                        if pc_attribs == 'xyzelspvXYZ':
+                            ma, mi = np.max(xyz,axis=0,keepdims=True), np.min(xyz,axis=0,keepdims=True)
+                            xyzn = (xyz - mi) / (ma - mi + 1e-8)   # as in PointNet ("normalized location as to the room (from 0 to 1)")
+                            rgb = np.zeros((xyz.shape[0],3))
+                            P = np.concatenate([xyz, rgb,elpsv, xyzn], axis=1)
+                        elif pc_attribs == 'xyzelspv':
+                            rgb = np.zeros((xyz.shape[0],3))
+                            P = np.concatenate([xyz, rgb,elpsv], axis=1)
 
                         f = h5py.File(os.path.join(pathC, file), 'r')
                         numc = len(f['components'].keys())
@@ -140,13 +141,15 @@ class HelixDataset:
                 # rescale to [-0.5,0.5]; keep xyz
                 elpsv[:,0] = elpsv[:,0] / np.max(elpsv[:,0]) - 0.5 
                 elpsv[:,1:] -= 0.5
-
-                #ma, mi = np.max(xyz,axis=0,keepdims=True), np.min(xyz,axis=0,keepdims=True)
-                #xyzn = (xyz - mi) / (ma - mi + 1e-8)   # as in PointNet ("normalized location as to the room (from 0 to 1)")
-
-                rgb = np.zeros((xyz.shape[0],3))
-                #P = np.concatenate([xyz, rgb,elpsv, xyzn], axis=1)
-                P = np.concatenate([xyz, rgb,elpsv], axis=1)
+                
+                if pc_attribs == 'xyzelspvXYZ':
+                    ma, mi = np.max(xyz,axis=0,keepdims=True), np.min(xyz,axis=0,keepdims=True)
+                    xyzn = (xyz - mi) / (ma - mi + 1e-8)   # as in PointNet ("normalized location as to the room (from 0 to 1)")
+                    rgb = np.zeros((xyz.shape[0],3))
+                    P = np.concatenate([xyz, rgb,elpsv, xyzn], axis=1)
+                elif pc_attribs == 'xyzelspv':
+                    rgb = np.zeros((xyz.shape[0],3))
+                    P = np.concatenate([xyz, rgb,elpsv], axis=1)
                 
                 f = h5py.File(os.path.join(pathC, file), 'r')
                 numc = len(f['components'].keys())
@@ -228,7 +231,7 @@ class CustomS3DISDataset:
     def read_custom_s3dis_format(self, raw_path, label_out=True):
     #S3DIS specific
         """extract data from a room folder"""
-        room_ver = genfromtxt(raw_path, delimiter=' ')
+        room_ver = np.genfromtxt(raw_path, delimiter=' ')
         xyz = np.array(room_ver[:, 0:3], dtype='float32')
         rgb = np.array(room_ver[:, 3:6], dtype='uint8')
         if not label_out:
@@ -238,7 +241,7 @@ class CustomS3DISDataset:
         xyz = xyz  - np.min(xyz,axis=0,keepdims=True)
         return xyz, rgb, room_labels
     
-    def preprocess_pointclouds(self,ROOT_PATH):
+    def preprocess_pointclouds(self, ROOT_PATH, pc_attribs):
         """ Preprocesses data by splitting them by components and normalizing."""
         for n,folder in enumerate(self.folders):
             pathP = os.path.join(ROOT_PATH,'parsed',folder)
@@ -258,8 +261,14 @@ class CustomS3DISDataset:
                     elpsv[:,0] = elpsv[:,0] / np.max(elpsv[:,0]) - 0.5 
                     elpsv[:,1:] -= 0.5
 
-                    rgb = np.zeros((xyz.shape[0],3))
-                    P = np.concatenate([xyz, rgb,elpsv], axis=1)
+                    if pc_attribs == 'xyzelspvXYZ':
+                        ma, mi = np.max(xyz,axis=0,keepdims=True), np.min(xyz,axis=0,keepdims=True)
+                        xyzn = (xyz - mi) / (ma - mi + 1e-8)   # as in PointNet ("normalized location as to the room (from 0 to 1)")
+                        rgb = np.zeros((xyz.shape[0],3))
+                        P = np.concatenate([xyz, rgb,elpsv, xyzn], axis=1)
+                    elif pc_attribs == 'xyzelspv':
+                        rgb = np.zeros((xyz.shape[0],3))
+                        P = np.concatenate([xyz, rgb,elpsv], axis=1)
 
                     f = h5py.File(os.path.join(pathC, file), 'r')
                     numc = len(f['components'].keys())

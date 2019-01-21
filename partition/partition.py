@@ -125,7 +125,8 @@ for folder in folders:
             fea_file    = fea_folder       + file_name + '.h5'
             spg_file    = spg_folder       + file_name + '.h5'
         elif args.dataset=='custom_s3dis':
-            data_file   = data_folder      + file_name + s3dis_data.extension
+            #data_file   = data_folder      + file_name + s3dis_data.extension
+            data_file   = file
             cloud_file  = cloud_folder     + file_name
             fea_file    = fea_folder       + file_name + '.h5'
             spg_file    = spg_folder       + file_name + '.h5'
@@ -210,7 +211,7 @@ for folder in folders:
                 geof[:,3] = 2. * geof[:, 3]
             elif args.dataset=='custom_s3dis':
                 features = geof
-                geof[:,3] = 2. * geof[:, 3]
+                features[:,3] = 2. * features[:, 3]
             elif args.dataset=='custom_dataset':
                 #choose here which features to use for the partition
                 features = geof

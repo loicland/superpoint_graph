@@ -423,3 +423,19 @@ with open(OUTPUT_FILE, 'a') as out_file:
             if X[6] == 2:
                 out_file.write(line)
 
+
+# In[5]:
+
+
+INPUT_FILE = '../data/custom_S3DIS/data/Area_5/crop_15.txt'
+room_ver = np.genfromtxt(INPUT_FILE, delimiter=' ')
+xyz = np.array(room_ver[:, 0:3], dtype='float32')
+rgb = np.array(room_ver[:, 3:6], dtype='uint8')
+room_labels = np.array(room_ver[:, 6], dtype='uint8')
+
+
+# In[12]:
+
+
+room_labels
+

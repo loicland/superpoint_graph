@@ -313,7 +313,7 @@ def visualise(root_path, filename, predictions):
 
 # # **Regrouping in a Class**
 
-# In[8]:
+# In[3]:
 
 
 class PointCloudSegmentation(object):
@@ -558,7 +558,7 @@ class PointCloudSegmentation(object):
                     features[:,3] = 2. * features[:,3] #increase importance of verticality (heuristic)
                 elif self._dataset =='helix':
                     features = geof
-                    geof[:,3] = 2. * geof[:, 3]
+                    features[:,3] = 2. * features[:, 3]
 
                 graph_nn["edge_weight"] = np.array(1. / (lambda_edge_weight + graph_nn["distances"] / np.mean(graph_nn["distances"])), dtype = 'float32')
                 print("        minimal partition...")
@@ -583,7 +583,7 @@ class PointCloudSegmentation(object):
         if self._dataset == 's3dis':
             create_dataset = s3dis_dataset.get_datasets
         elif self._dataset == 'helix':
-            HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, single_file = True, filename = file_name, folder = folder)
+            HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, self._pc_attribs, single_file = True, filename = file_name, folder = folder)
             create_data = HelixDataset().get_data
         
         if not os.path.isdir(root + "/predictions"):
@@ -655,7 +655,7 @@ class PointCloudSegmentation(object):
 
 # ## Initialize the model
 
-# In[9]:
+# In[12]:
 
 
 MODEL_PATH = 'results/s3dis/bw/cv1_3/model.pth.tar'
@@ -666,7 +666,7 @@ pc_attribs = 'xyzelspv'
 dataset = 'helix'
 
 
-# In[10]:
+# In[13]:
 
 
 model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs, dataset)
@@ -675,7 +675,7 @@ model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attrib
 # 
 # ## Load the Weights
 
-# In[11]:
+# In[14]:
 
 
 model.load_model()
@@ -683,7 +683,7 @@ model.load_model()
 
 # ## Segment the Point Cloud
 
-# In[12]:
+# In[17]:
 
 
 xyz, xyz_labels = model.process('data/TEST/data/test/test_02.ply') #set save_model to True if you want to write out the segmented point cloud. 
@@ -699,7 +699,7 @@ xyz, xyz_labels = model.load_prediction('data/TEST', 'test/test_02', 'test_02_pr
 
 # ## Visualisation
 
-# In[12]:
+# In[18]:
 
 
 model.display(xyz, xyz_labels)
