@@ -236,7 +236,8 @@ class CustomS3DISDataset:
         rgb = np.array(room_ver[:, 3:6], dtype='uint8')
         if not label_out:
             return xyz, rgb
-        room_labels = np.array(room_ver[:, 6], dtype='uint8')
+        # label has to start with 1 and not 0, so adding 1 since ceiling : 0
+        room_labels = np.array(room_ver[:, 6], dtype='uint8') + 1
         # Align x,y,z with origin
         xyz = xyz  - np.min(xyz,axis=0,keepdims=True)
         return xyz, rgb, room_labels
