@@ -313,7 +313,7 @@ def visualise(root_path, filename, predictions):
 
 # # **Regrouping in a Class**
 
-# In[19]:
+# In[2]:
 
 
 class PointCloudSegmentation(object):
@@ -611,7 +611,6 @@ class PointCloudSegmentation(object):
                 prediction = np.argmax(o_cpu,axis=-1)
                 predictions[fname] = prediction
                 hf.create_dataset(name=fname, data=prediction) #(0-based classes)
-        print(predictions)
         return predictions  
     
     
@@ -656,10 +655,10 @@ class PointCloudSegmentation(object):
 
 # ## Initialize the model
 
-# In[23]:
+# In[3]:
 
 
-MODEL_PATH = 'results/s3dis/bw/cv1_5/model.pth.tar'
+MODEL_PATH = 'results/s3dis/bw/cv1_2/model.pth.tar'
 model_config = 'gru_10_0,f_14'
 edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d'
 #pc_attribs = 'xyzelpsvXYZ'
@@ -667,7 +666,7 @@ pc_attribs = 'xyzelpsv'
 dataset = 'helix'
 
 
-# In[24]:
+# In[4]:
 
 
 model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs, dataset)
@@ -676,7 +675,7 @@ model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attrib
 # 
 # ## Load the Weights
 
-# In[25]:
+# In[5]:
 
 
 model.load_model()
@@ -684,21 +683,21 @@ model.load_model()
 
 # ## Segment the Point Cloud
 
-# In[ ]:
+# In[15]:
 
 
-xyz, xyz_labels = model.process('data/TEST/data/test/test_12.ply', save_model = False) #set save_model to True if you want to write out the segmented point cloud. 
+xyz, xyz_labels = model.process('data/TEST/data/test/A6crop_9.ply', save_model = False) #set save_model to True if you want to write out the segmented point cloud. 
 
 
-# In[6]:
+# In[13]:
 
 
-xyz, xyz_labels = model.load_prediction('data/TEST', 'test/test_02', 'test_02_predictions.h5')
+xyz, xyz_labels = model.load_prediction('data/TEST', '1950-charleston-road/L20_-23', 'L20_-23_predictions.h5')
 
 
 # ## Visualisation
 
-# In[ ]:
+# In[16]:
 
 
 model.display(xyz, xyz_labels)
@@ -707,6 +706,7 @@ model.display(xyz, xyz_labels)
 # In[21]:
 
 
+# extracting point with a particular label from the point cloud
 i_label = 0
 cloud = xyz[np.where(xyz_labels == i_label)]
 # converting simple array to open3d.PointCloud object
