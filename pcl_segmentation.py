@@ -313,7 +313,7 @@ def visualise(root_path, filename, predictions):
 
 # # **Regrouping in a Class**
 
-# In[2]:
+# In[7]:
 
 
 class PointCloudSegmentation(object):
@@ -321,15 +321,10 @@ class PointCloudSegmentation(object):
     Collection of functions used to segment a point cloud
     """
     
-    def __init__(self, MODEL_PATH, model_config, edge_attribs, pc_attribs, dataset):
+    def __init__(self, MODEL_PATH, dataset):
         self._model_path = MODEL_PATH
-        self._model_config = model_config
-        self._edge_attribs = edge_attribs
-        self._pc_attribs = pc_attribs
         self._dataset = dataset
-        self._model = None
-        self._cloud_embedder = None
-        self._args = None
+        self._model, self._cloud_embedder, self._args = self._load_model()
         
     
     def process(self, input_pcl, save_model = False):
@@ -348,9 +343,9 @@ class PointCloudSegmentation(object):
         colors = []
         
         if self._dataset == 's3dis':
-            dataset_info = s3dis_dataset.get_info(self._edge_attribs,self._pc_attribs)
+            dataset_info = s3dis_dataset.get_info(self._args.edge_attribs,self._args.pc_attribs)
         elif self._dataset == 'helix':
-            dataset_info = HelixDataset().get_info(self._edge_attribs,self._pc_attribs)
+            dataset_info = HelixDataset().get_info(self._args.edge_attribs,self._args.pc_attribs)
         
         for i_label in range(n_labels):
             cloud = xyz[np.where(xyz_labels == i_label)]
@@ -366,21 +361,18 @@ class PointCloudSegmentation(object):
         display_cloud(clouds = clouds, labels = labels, colors = colors)
        
     
-    def load_model(self):
+    def _load_model(self):
         """ load the weiths of the model """
         print("=================\n   "+ 'Preparing Model' +"\n=================")
         print("=> loading checkpoint '{}'".format(self._model_path))
         checkpoint = torch.load(self._model_path)
+        checkpoint['args'].resume = self._model_path
         print(checkpoint['args'])
-        checkpoint['args'].model_config = self._model_config 
         cloud_embedder = pointnet.CloudEmbedder(checkpoint['args'])
-        dbinfo = HelixDataset().get_info(self._edge_attribs,self._pc_attribs)
+        dbinfo = HelixDataset().get_info(checkpoint['args'].edge_attribs,checkpoint['args'].pc_attribs)
         model = self._create_model(checkpoint['args'], dbinfo) #use original arguments, architecture can't change    
         model.load_state_dict(checkpoint['state_dict'])
-        self._model = model
-        self._cloud_embedder = cloud_embedder
-        self._args = checkpoint['args']
-        return 
+        return model, cloud_embedder, checkpoint['args']
     
     
     def load_prediction(self, root_path, filename, prediction_file):
@@ -578,12 +570,12 @@ class PointCloudSegmentation(object):
     
     def _predict(self, root, folder, file):
         self._args.ROOT_PATH = root
-        self._args.S3DIS_PATH = 'data/custom_S3DIS_bis'
+        #self._args.S3DIS_PATH = 'data/custom_S3DIS_bis # this points toward the training data used so it can 'normalize' the edges features of the tested data wrt the training set
         file_name = file+'.h5'
         if self._dataset == 's3dis':
             create_dataset = s3dis_dataset.get_datasets
         elif self._dataset == 'helix':
-            HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, self._pc_attribs, single_file = True, filename = file_name, folder = folder)
+            HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, self._args.pc_attribs, single_file = True, filename = file_name, folder = folder)
             create_data = HelixDataset().get_data
         
         if not os.path.isdir(root + "/predictions"):
@@ -653,40 +645,32 @@ class PointCloudSegmentation(object):
 
 # # **How to use the Class**
 
-# ## Initialize the model
+# ## Initialize the model and Load the Weights
 
-# In[3]:
+# In[8]:
 
 
 MODEL_PATH = 'results/s3dis/bw/cv1_2/model.pth.tar'
-model_config = 'gru_10_0,f_14'
-edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d'
+# all these parameters are stored in the model file
+#model_config = 'gru_10_0,f_14'
+#edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d'
 #pc_attribs = 'xyzelpsvXYZ'
-pc_attribs = 'xyzelpsv'
+#pc_attribs = 'xyzelpsv'
 dataset = 'helix'
 
 
-# In[4]:
+# In[9]:
 
 
-model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs, dataset)
-
-
-# 
-# ## Load the Weights
-
-# In[5]:
-
-
-model.load_model()
+model = PointCloudSegmentation(MODEL_PATH, dataset)
 
 
 # ## Segment the Point Cloud
 
-# In[15]:
+# In[5]:
 
 
-xyz, xyz_labels = model.process('data/TEST/data/test/A6crop_9.ply', save_model = False) #set save_model to True if you want to write out the segmented point cloud. 
+xyz, xyz_labels = model.process('data/TEST/data/test/test_13.ply', save_model = False) #set save_model to True if you want to write out the segmented point cloud. 
 
 
 # In[13]:
