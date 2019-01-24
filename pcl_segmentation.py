@@ -313,7 +313,7 @@ def visualise(root_path, filename, predictions):
 
 # # **Regrouping in a Class**
 
-# In[7]:
+# In[2]:
 
 
 class PointCloudSegmentation(object):
@@ -570,7 +570,10 @@ class PointCloudSegmentation(object):
     
     def _predict(self, root, folder, file):
         self._args.ROOT_PATH = root
-        #self._args.S3DIS_PATH = 'data/custom_S3DIS_bis # this points toward the training data used so it can 'normalize' the edges features of the tested data wrt the training set
+        # this points toward the training data used so it can 'normalize' the edges features of the tested data wrt the training set
+        # comment out and specify if you changed the named of the folder used for training
+        #self._args.S3DIS_PATH = 'data/custom_S3DIS_bis'
+        
         file_name = file+'.h5'
         if self._dataset == 's3dis':
             create_dataset = s3dis_dataset.get_datasets
@@ -647,19 +650,14 @@ class PointCloudSegmentation(object):
 
 # ## Initialize the model and Load the Weights
 
-# In[8]:
+# In[3]:
 
 
 MODEL_PATH = 'results/s3dis/bw/cv1_2/model.pth.tar'
-# all these parameters are stored in the model file
-#model_config = 'gru_10_0,f_14'
-#edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d'
-#pc_attribs = 'xyzelpsvXYZ'
-#pc_attribs = 'xyzelpsv'
 dataset = 'helix'
 
 
-# In[9]:
+# In[4]:
 
 
 model = PointCloudSegmentation(MODEL_PATH, dataset)
@@ -670,31 +668,55 @@ model = PointCloudSegmentation(MODEL_PATH, dataset)
 # In[5]:
 
 
-xyz, xyz_labels = model.process('data/TEST/data/test/test_13.ply', save_model = False) #set save_model to True if you want to write out the segmented point cloud. 
+xyz, xyz_labels = model.process('data/TEST/data/test/test_13b-Copy1.ply', save_model = False) #set save_model to True if you want to write out the segmented point cloud. 
 
 
-# In[13]:
+# In[8]:
 
 
-xyz, xyz_labels = model.load_prediction('data/TEST', '1950-charleston-road/L20_-23', 'L20_-23_predictions.h5')
+xyz, xyz_labels = model.load_prediction('data/TEST', 'test/A1_12_13_21_22', 'A1_12_13_21_22_predictions.h5')
+
+
+# ## Running Inferences independantly on neighbour rooms and displaying results together
+
+# In[ ]:
+
+
+xyz4, xyz_labels4 = model.load_prediction('data/TEST', 'test/A1crop_12', 'A1crop_12_predictions.h5')
+xyz1, xyz_labels1 = model.load_prediction('data/TEST', 'test/A1crop_13', 'A1crop_13_predictions.h5')
+xyz2, xyz_labels2 = model.load_prediction('data/TEST', 'test/A1crop_21', 'A1crop_21_predictions.h5')
+xyz3, xyz_labels3 = model.load_prediction('data/TEST', 'test/A1crop_22', 'A1crop_22_predictions.h5')
+
+# when partitioned, the rooms are moved to the origin, need to offset them for the display
+# i.e need to memorize how rooms are positionned from each other
+xyz1[:,0] += 6
+xyz1[:,1] += 0
+xyz2[:,0] += 0
+xyz2[:,1] += 6
+xyz3[:,0] += 6
+xyz3[:,1] += 6
+
+# Putting everything back togeter
+XYZ = []
+XYZ_labels = []
+XYZ.append(xyz1)
+XYZ.append(xyz2)
+XYZ.append(xyz3)
+XYZ.append(xyz4)
+XYZ_labels.append(xyz_labels1)
+XYZ_labels.append(xyz_labels2)
+XYZ_labels.append(xyz_labels3)
+XYZ_labels.append(xyz_labels4)
+
+# converting a list of list into a list then from a list to an array
+XYZ = np.asarray([item for sublist in XYZ for item in sublist])
+XYZ_labels = np.asarray([item for sublist in XYZ_labels for item in sublist])
 
 
 # ## Visualisation
 
-# In[16]:
+# In[6]:
 
 
 model.display(xyz, xyz_labels)
-
-
-# In[21]:
-
-
-# extracting point with a particular label from the point cloud
-i_label = 0
-cloud = xyz[np.where(xyz_labels == i_label)]
-# converting simple array to open3d.PointCloud object
-pcd = o3d.PointCloud()
-pcd.points = o3d.Vector3dVector(cloud)
-o3d.write_point_cloud('floor.ply', pcd)
 
