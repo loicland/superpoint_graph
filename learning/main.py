@@ -36,6 +36,9 @@ import metrics
 sys.path.append('./providers')
 from datasets import *
 
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
 
 def main():
     parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs')
@@ -136,7 +139,7 @@ def main():
         create_dataset = s3dis_dataset.get_datasets
     elif args.dataset == 'custom_s3dis':
         s3dis_data = CustomS3DISDataset()
-        s3dis_data.preprocess_pointclouds(args.S3DIS_PATH, args.pc_attribs)
+        #s3dis_data.preprocess_pointclouds(args.S3DIS_PATH, args.pc_attribs)
         dbinfo = s3dis_data.get_info(args)
         create_dataset = s3dis_data.get_datasets
     elif args.dataset=='custom_dataset':
@@ -192,8 +195,16 @@ def main():
 
             embeddings = ptnCloudEmbedder.run(model, *clouds_data)
             outputs = model.ecc(embeddings)
-
+            
             loss = nn.functional.cross_entropy(outputs, Variable(label_mode))
+            # uncomment to train with class weighting : when class are unbalanced
+            # rough estimation of ratios ceiling 19.2, floor 18, wall 28, window 6.5, door 4.6, clutter 27.8
+            # [ceiling, floor, wall, column, beam, window, door, table, chair, bookcase, sofa, board, clutter, stairs]
+            #weights = [1/0.19, 1/0.18, 1/0.28, 0, 0, 1/0.06, 1/0.04, 0, 0, 0, 0, 0, 1/0.28, 0]
+            #class_weights=torch.FloatTensor(weights).cuda() #GPU Tensor, remove .cuda for CPu Tensors
+            #loss = nn.functional.cross_entropy(outputs, Variable(label_mode), weight=class_weights)
+            loss = nn.functional.cross_entropy(outputs, Variable(label_mode))
+            
             loss.backward()
             ptnCloudEmbedder.bw_hook()
 

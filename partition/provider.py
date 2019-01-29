@@ -140,7 +140,7 @@ def get_color_from_label(object_label, dataset):
             10: [ 89,  47,  95], #'sofa'  ->  purple
             11: [ 81, 109, 114], #'board'   ->  grey
             12: [233, 233, 229], #'clutter'  ->  light grey
-            13: [100, 200, 150], #'stairs'  ->  light purple
+            13: [199, 101, 176], #'stairs'  ->  light purple
             14: [0   ,   0,   0], #unlabelled .->. black
             }.get(object_label, 14)
     elif (dataset == 'sema3d'): #Semantic3D

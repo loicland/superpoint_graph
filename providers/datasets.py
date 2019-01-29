@@ -215,6 +215,12 @@ class CustomS3DISDataset:
                 for fname in sorted(os.listdir(path)):
                     if fname.endswith(".h5"):
                         trainlist.append(spg.spg_reader(args, path + fname, True))
+        
+        """path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, 5)
+        for fname in sorted(os.listdir(path)):
+            if fname.endswith(".h5"):
+                trainlist.append(spg.spg_reader(args, path + fname, True))"""
+        
         path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, args.cvfold)
         for fname in sorted(os.listdir(path)):
             if fname.endswith(".h5"):
@@ -238,6 +244,17 @@ class CustomS3DISDataset:
             return xyz, rgb
         # label has to start with 1 and not 0, so adding 1 since ceiling : 0
         room_labels = np.array(room_ver[:, 6], dtype='uint8') + 1
+        # keeping only a few labels
+        #room_labels = np.array(room_ver[:, 6], dtype='uint8')
+        #room_labels[room_labels == 3] = 2 # considering columns as walls
+        #room_labels[room_labels == 4] = 12 # considering beam as clutter
+        #room_labels[room_labels == 7] = 12 # and so on
+        #room_labels[room_labels == 8] = 12
+        #room_labels[room_labels == 9] = 12
+        #room_labels[room_labels == 10] = 12
+        #room_labels[room_labels == 11] = 2 # considering board as walls
+        #room_labels[room_labels == 13] = 12
+        #room_labels += 1
         # Align x,y,z with origin
         xyz = xyz  - np.min(xyz,axis=0,keepdims=True)
         return xyz, rgb, room_labels
@@ -258,7 +275,7 @@ class CustomS3DISDataset:
                     xyz = f['xyz'][:]
                     elpsv = np.stack([ f['xyz'][:,2][:], f['linearity'][:], f['planarity'][:], f['scattering'][:], f['verticality'][:] ], axis=1)
 
-                    # rescale to [-0.5,0.5]; keep xyz
+                    # rescale to [-0.5,0.5]; keep xyz # need to be aligned with the origin beforehand
                     elpsv[:,0] = elpsv[:,0] / np.max(elpsv[:,0]) - 0.5 
                     elpsv[:,1:] -= 0.5
 

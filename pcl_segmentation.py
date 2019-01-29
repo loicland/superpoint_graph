@@ -653,7 +653,7 @@ class PointCloudSegmentation(object):
 # In[3]:
 
 
-MODEL_PATH = 'results/s3dis/bw/cv1_2/model.pth.tar'
+MODEL_PATH = 'results/s3dis/bw/cv1_3bis/model.pth.tar'
 dataset = 'helix'
 
 
@@ -665,21 +665,21 @@ model = PointCloudSegmentation(MODEL_PATH, dataset)
 
 # ## Segment the Point Cloud
 
-# In[5]:
+# In[28]:
 
 
-xyz, xyz_labels = model.process('data/TEST/data/test/test_13b-Copy1.ply', save_model = False) #set save_model to True if you want to write out the segmented point cloud. 
+xyz, xyz_labels = model.process('data/TEST/data/test/A1_19_20_28_29.ply', save_model = False) #set save_model to True if you want to write out the segmented point cloud. 
 
 
-# In[8]:
+# In[26]:
 
 
-xyz, xyz_labels = model.load_prediction('data/TEST', 'test/A1_12_13_21_22', 'A1_12_13_21_22_predictions.h5')
+xyz, xyz_labels = model.load_prediction('data/TEST', 'test/A1_19_20_28_29', 'A1_19_20_28_29_predictions.h5')
 
 
 # ## Running Inferences independantly on neighbour rooms and displaying results together
 
-# In[ ]:
+# In[11]:
 
 
 xyz4, xyz_labels4 = model.load_prediction('data/TEST', 'test/A1crop_12', 'A1crop_12_predictions.h5')
@@ -715,7 +715,7 @@ XYZ_labels = np.asarray([item for sublist in XYZ_labels for item in sublist])
 
 # ## Visualisation
 
-# In[6]:
+# In[29]:
 
 
 model.display(xyz, xyz_labels)
