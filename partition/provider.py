@@ -55,7 +55,7 @@ def prediction2ply(filename, xyz, prediction, n_label, dataset):
     if len(prediction.shape) > 1 and prediction.shape[1] > 1:
         prediction = np.argmax(prediction, axis = 1)
     color = np.zeros(xyz.shape)
-    for i_label in range(0, n_label + 1):
+    for i_label in range(0, n_label):
         color[np.where(prediction == i_label), :] = get_color_from_label(i_label, dataset)
     prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
     vertex_all = np.empty(len(xyz), dtype=prop)
@@ -125,23 +125,24 @@ def get_color_from_label(object_label, dataset):
             12: [ 81, 109, 114], #'board'   ->  grey
             13: [233, 233, 229], #'clutter'  ->  light grey
             }.get(object_label, -1)
-    elif (dataset == 'helix'): #Semantic3D
+    elif (dataset == 'helix'): #helix and custom data
         object_label = {
-            0: [0   ,   0,   0], #unlabelled .->. black
-            1: [ 233, 229, 107], #'ceiling' .-> .yellow
-            2: [  95, 156, 196], #'floor' .-> . blue
-            3: [ 179, 116,  81], #'wall'  ->  brown
-            4: [  81, 163, 148], #'column'  ->  bluegreen
-            5: [ 241, 149, 131], #'beam'  ->  salmon
-            6: [  77, 174,  84], #'window'  ->  bright green
-            7: [ 108, 135,  75], #'door'   ->  dark green
-            8: [  79,  79,  76], #'table'  ->  dark grey
-            9: [  41,  49, 101], #'chair'  ->  darkblue
-            10: [223,  52,  52], #'bookcase'  ->  red
-            11: [ 89,  47,  95], #'sofa'  ->  purple
-            12: [ 81, 109, 114], #'board'   ->  grey
-            13: [233, 233, 229], #'clutter'  ->  light grey
-            }.get(object_label, -1)
+            0: [ 233, 229, 107], #'ceiling' .-> .yellow
+            1: [  95, 156, 196], #'floor' .-> . blue
+            2: [ 179, 116,  81], #'wall'  ->  brown
+            3: [  81, 163, 148], #'column'  ->  bluegreen
+            4: [ 241, 149, 131], #'beam'  ->  salmon
+            5: [  77, 174,  84], #'window'  ->  bright green
+            6: [ 108, 135,  75], #'door'   ->  dark green
+            7: [  79,  79,  76], #'table'  ->  dark grey
+            8: [  41,  49, 101], #'chair'  ->  darkblue
+            9: [223,  52,  52], #'bookcase'  ->  red
+            10: [ 89,  47,  95], #'sofa'  ->  purple
+            11: [ 81, 109, 114], #'board'   ->  grey
+            12: [233, 233, 229], #'clutter'  ->  light grey
+            13: [199, 101, 176], #'stairs'  ->  light purple
+            14: [0   ,   0,   0], #unlabelled .->. black
+            }.get(object_label, 14)
     elif (dataset == 'sema3d'): #Semantic3D
         object_label =  {
             0: [0   ,   0,   0], #unlabelled .->. black

@@ -269,7 +269,7 @@ def predict(args, root):
 
 # ### Outputs Segmented Point Cloud
 
-# In[15]:
+# In[2]:
 
 
 def visualise(root_path, filename, predictions):
@@ -321,40 +321,33 @@ class PointCloudSegmentation(object):
     Collection of functions used to segment a point cloud
     """
     
-    def __init__(self, MODEL_PATH, model_config, edge_attribs, pc_attribs):
+    def __init__(self, MODEL_PATH, dataset):
         self._model_path = MODEL_PATH
-        self._model_config = model_config
-        self._edge_attribs = edge_attribs
-        self._pc_attribs = pc_attribs
-        self._dbinfo = HelixDataset().get_info(edge_attribs,pc_attribs)
-        self._model = None
-        self._cloud_embedder = None
-        self._args = None
+        self._dataset = dataset
+        self._model, self._cloud_embedder, self._args = self._load_model()
         
     
-    def process(self, input_pcl, dataset = 'helix'):
+    def process(self, input_pcl, save_model = False):
         """ take a raw point cloud as input and output a segmented point cloud in a .ply file"""
-        self._args.dataset = dataset
         root, folder, file = self._partition(input_pcl)
         print("=================\n   "+ 'Running Inferences' +"\n=================")
         predictions = self._predict(root, folder, file)
-        print("=================\n   "+ 'Saving Segmented Point Cloud' +"\n=================")
-        xyz, xyz_labels = self._save(root, folder+file , predictions)
+        xyz, xyz_labels = self._save(root, folder+file , predictions, save_model)
         return xyz, xyz_labels
     
     
-    def display(self, xyz, xyz_labels, dataset = 'helix'):
-        n_labels = 13
+    def display(self, xyz, xyz_labels):
+        n_labels = 14
         clouds = []
         labels = []
         colors = []
         
-        if dataset == 's3dis':
-            dataset_info = s3dis_dataset.get_info(self._edge_attribs,self._pc_attribs)
-        elif dataset == 'helix':
-            dataset_info = HelixDataset().get_info(self._edge_attribs,self._pc_attribs)
+        if self._dataset == 's3dis':
+            dataset_info = s3dis_dataset.get_info(self._args.edge_attribs,self._args.pc_attribs)
+        elif self._dataset == 'helix':
+            dataset_info = HelixDataset().get_info(self._args.edge_attribs,self._args.pc_attribs)
         
-        for i_label in range(0, n_labels+1):
+        for i_label in range(n_labels):
             cloud = xyz[np.where(xyz_labels == i_label)]
             # converting simple array to open3d.PointCloud object
             pcd = o3d.PointCloud()
@@ -362,35 +355,33 @@ class PointCloudSegmentation(object):
             if len(pcd.points) != 0 :
                 clouds.append(pcd)
                 labels.append(dataset_info['inv_class_map'][i_label])
-                colors.append(provider.get_color_from_label(i_label+1, dataset))
+                colors.append(provider.get_color_from_label(i_label, self._dataset))
         
         colors = np.asarray(colors)/255
         display_cloud(clouds = clouds, labels = labels, colors = colors)
        
     
-    def load_model(self):
+    def _load_model(self):
         """ load the weiths of the model """
         print("=================\n   "+ 'Preparing Model' +"\n=================")
         print("=> loading checkpoint '{}'".format(self._model_path))
         checkpoint = torch.load(self._model_path)
-
-        checkpoint['args'].model_config = self._model_config 
+        checkpoint['args'].resume = self._model_path
+        print(checkpoint['args'])
         cloud_embedder = pointnet.CloudEmbedder(checkpoint['args'])
-        model = self._create_model(checkpoint['args'], self._dbinfo) #use original arguments, architecture can't change    
+        dbinfo = HelixDataset().get_info(checkpoint['args'].edge_attribs,checkpoint['args'].pc_attribs)
+        model = self._create_model(checkpoint['args'], dbinfo) #use original arguments, architecture can't change    
         model.load_state_dict(checkpoint['state_dict'])
-        self._model = model
-        self._cloud_embedder = cloud_embedder
-        self._args = checkpoint['args']
-        return 
+        return model, cloud_embedder, checkpoint['args']
     
     
     def load_prediction(self, root_path, filename, prediction_file):
         """ load the predictions from a file
         root_path : relative path to the data folder (containing features, superpoint graph... folders)
-        filename : name of the file without the extension
-        prediction_file : name of the prediction file
+        filename : filename without the extension and its parent directory. ex : if test_01.ply in in directory test : test\test_01
+        prediction_file : name of the prediction file : ex test_01_predictions.h5
         """
-        n_labels = 13
+        n_labels = 14
 
         folder = os.path.split(filename)[0] + '/'
         file_name = os.path.split(filename)[1]
@@ -399,8 +390,9 @@ class PointCloudSegmentation(object):
         fea_file   = os.path.join(root_path,'features',folder,file_name + '.h5')
         spg_file   = os.path.join(root_path,'superpoint_graphs',folder,file_name + '.h5')
         ply_folder = os.path.join(root_path,'clouds',folder)
+        #pred_folder = os.path.join(root_path,'predictions',folder)
         ply_file   = os.path.join(ply_folder,file_name)
-        res_file   = os.path.join(root_path, prediction_file)
+        res_file   = os.path.join(root_path,'predictions', folder, prediction_file)
 
         if not os.path.isdir(ply_folder ):
             os.mkdir(ply_folder)
@@ -452,18 +444,18 @@ class PointCloudSegmentation(object):
                     - overwrite : Wether to read existing files or overwrite them, type=int
             """
             
-            if self._args.dataset == 's3dis':
+            if self._dataset == 's3dis':
                 root, file =  os.path.dirname(os.path.dirname(os.path.dirname(os.path.split(os.path.abspath(path_to_pcl))[0]))), os.path.split(os.path.abspath(path_to_pcl))[1]
                 root = root + '/'
-            elif self._args.dataset == 'helix':
+            elif self._dataset == 'helix':
                 root, file =  os.path.dirname(os.path.dirname(os.path.split(os.path.abspath(path_to_pcl))[0])), os.path.split(os.path.abspath(path_to_pcl))[1]
                 root = root + '/'
             
             #list of subfolders to be processed
-            if self._args.dataset == 's3dis':
+            if self._dataset == 's3dis':
                 folder = os.path.split(os.path.dirname(os.path.dirname(path_to_pcl)))[1] + '/'
                 n_labels = 13
-            elif self._args.dataset == 'helix':
+            elif self._dataset == 'helix':
                 helix_data = HelixDataset()
                 folder = os.path.split(os.path.split(os.path.abspath(path_to_pcl))[0])[1] + '/'
                 n_labels = len(helix_data.labels.keys())
@@ -497,19 +489,19 @@ class PointCloudSegmentation(object):
             
             file_name = os.path.splitext(os.path.basename(file))[0]
            
-            if self._args.dataset == 's3dis':
+            if self._dataset == 's3dis':
                 if not os.path.isfile(data_folder +  file_name + '/' + file):
                     raise ValueError('{} does not exist in {}'.format(file, data_folder +  file_name + '/'))
-            elif self._args.dataset == 'helix':
+            elif self._dataset == 'helix':
                 if not os.path.isfile(data_folder +  file):
                     raise ValueError('{} does not exist in {}'.format(file, data_folder))
             
-            if self._args.dataset=='s3dis':
+            if self._dataset =='s3dis':
                 data_file   = data_folder      + file_name + '/' + file_name + ".txt"
                 cloud_file  = cloud_folder     + file_name
                 fea_file    = fea_folder       + file_name + '.h5'
                 spg_file    = spg_folder       + file_name + '.h5'
-            elif self._args.dataset=='helix':
+            elif self._dataset =='helix':
                 data_file   = data_folder      + file_name + helix_data.extension
                 cloud_file  = cloud_folder     + file_name
                 fea_file    = fea_folder       + file_name + '.h5'
@@ -523,11 +515,11 @@ class PointCloudSegmentation(object):
                 print("    creating the feature file...")
                 #--- read the data files and compute the labels---
                 
-                if self._args.dataset ==' s3dis':
+                if self._dataset ==' s3dis':
                     xyz, rgb, labels = read_s3dis_format(data_file)
                     if voxel_width > 0:
                         xyz, rgb, labels = libply_c.prune(xyz, voxel_width, rgb, labels, n_labels)
-                elif self._args.dataset == 'helix' :
+                elif self._dataset == 'helix' :
                     xyz = helix_data.read_pointcloud(data_file).astype(dtype='float32')
                     if voxel_width > 0:
                         xyz = libply_c.prune(xyz, voxel_width, np.zeros(xyz.shape,dtype='u1'), np.array(1,dtype='u1'), 0)[0]
@@ -553,12 +545,12 @@ class PointCloudSegmentation(object):
                 #--- build the spg h5 file --
                 features = geof
                 geof[:,3] = 2. * geof[:, 3]
-                if self._args.dataset=='s3dis':
+                if self._dataset =='s3dis':
                     features = np.hstack((geof, rgb/255.)).astype('float32')#add rgb as a feature for partitioning
                     features[:,3] = 2. * features[:,3] #increase importance of verticality (heuristic)
-                elif self._args.dataset=='helix':
+                elif self._dataset =='helix':
                     features = geof
-                    geof[:,3] = 2. * geof[:, 3]
+                    features[:,3] = 2. * features[:, 3]
 
                 graph_nn["edge_weight"] = np.array(1. / (lambda_edge_weight + graph_nn["distances"] / np.mean(graph_nn["distances"])), dtype = 'float32')
                 print("        minimal partition...")
@@ -578,28 +570,36 @@ class PointCloudSegmentation(object):
     
     def _predict(self, root, folder, file):
         self._args.ROOT_PATH = root
-        self._args.S3DIS_PATH = 'data/S3DIS'
-        file_name = file+'.h5'
-        if self._args.dataset == 's3dis':
-            create_dataset = s3dis_dataset.get_datasets
-        elif self._args.dataset == 'helix':
-            HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, single_file = True, filename = file_name, folder = folder)
-            create_dataset = HelixDataset().get_datasets
+        # this points toward the training data used so it can 'normalize' the edges features of the tested data wrt the training set
+        # comment out and specify if you changed the named of the folder used for training
+        #self._args.S3DIS_PATH = 'data/custom_S3DIS_bis'
         
+        file_name = file+'.h5'
+        if self._dataset == 's3dis':
+            create_dataset = s3dis_dataset.get_datasets
+        elif self._dataset == 'helix':
+            HelixDataset().preprocess_pointclouds(self._args.ROOT_PATH, self._args.pc_attribs, single_file = True, filename = file_name, folder = folder)
+            create_data = HelixDataset().get_data
+        
+        if not os.path.isdir(root + "/predictions"):
+                os.mkdir(root + "/predictions")
+        pred_folder = root   + "/predictions/" + folder
+        if not os.path.isdir(pred_folder):
+                os.mkdir(pred_folder)
+            
         collected = defaultdict(list)
-        for ss in range(self._args.test_multisamp_n):
-            eval_data = create_dataset(self._args, ss, single_file = True, filename = file_name, folder_s = folder)[1]
-            loader = torch.utils.data.DataLoader(eval_data, batch_size=1, collate_fn=spg.eccpc_collate, num_workers=8)
-            for bidx, (targets, GIs, clouds_data) in enumerate(loader):
-                self._model.ecc.set_info(GIs, self._args.cuda)
-                label_mode_cpu, label_vec_cpu, segm_size_cpu = targets[:,0], targets[:,2:], targets[:,1:].sum(1).float()
-                data = clouds_data
-                embeddings = self._cloud_embedder.run(self._model, *clouds_data)
-                outputs = self._model.ecc(embeddings)
-                fname = clouds_data[0][0][:clouds_data[0][0].rfind('.')]
-                collected[fname].append((outputs.data.cpu().numpy(), label_mode_cpu.numpy(), label_vec_cpu.numpy()))
+        eval_data = create_data(self._args, filename = file_name, folder_s = folder)[1]
+        loader = torch.utils.data.DataLoader(eval_data, batch_size=1, collate_fn=spg.eccpc_collate, num_workers=8)
+        for bidx, (targets, GIs, clouds_data) in enumerate(loader):
+            self._model.ecc.set_info(GIs, self._args.cuda)
+            label_mode_cpu, label_vec_cpu, segm_size_cpu = targets[:,0], targets[:,2:], targets[:,1:].sum(1).float()
+            data = clouds_data
+            embeddings = self._cloud_embedder.run(self._model, *clouds_data)
+            outputs = self._model.ecc(embeddings)
+            fname = clouds_data[0][0][:clouds_data[0][0].rfind('.')]
+            collected[fname].append((outputs.data.cpu().numpy(), label_mode_cpu.numpy(), label_vec_cpu.numpy()))
         predictions = {}
-        with h5py.File(os.path.join(self._args.ROOT_PATH, os.path.splitext(os.path.basename(file))[0] +'_predictions.h5'), 'w') as hf:
+        with h5py.File(os.path.join(pred_folder, os.path.splitext(os.path.basename(file))[0] +'_predictions.h5'), 'w') as hf:
             for fname,output in collected.items():
                 o_cpu, t_cpu, tvec_cpu = list(zip(*output))
                 o_cpu = np.mean(np.stack(o_cpu,0),0)
@@ -609,8 +609,8 @@ class PointCloudSegmentation(object):
         return predictions  
     
     
-    def _save(self, root_path, filename,predictions):
-        n_labels = 13
+    def _save(self, root_path, filename,predictions, save_model):
+        n_labels = 14
 
         folder = os.path.split(filename)[0] + '/'
         file_name = os.path.split(filename)[1]
@@ -632,66 +632,91 @@ class PointCloudSegmentation(object):
             raise ValueError("%s does not exist and is needed to output the partition  or result ply" % spg_file) 
         else:
             graph_spg, components, in_component = provider.read_spg(spg_file)
-
+        
         pred_red  = predictions[filename]        
         if (len(pred_red) != len(components)):
             raise ValueError("It looks like the spg is not adapted to the result file") 
         pred_full = provider.reduced_labels2full(pred_red, components, len(xyz))
-
-        print("writing the prediction file (i.e Semantic Segmented Point Cloud) in {}...".format(ply_folder))
-        provider.prediction2ply(ply_file + "_pred.ply", xyz, pred_full+1, n_labels,  self._args.dataset)
+        
+        if save_model:
+            print("=================\n   "+ 'Saving Segmented Point Cloud' +"\n=================")
+            print("writing the prediction file (i.e Semantic Segmented Point Cloud) in {}...".format(ply_folder))
+            provider.prediction2ply(ply_file + "_pred.ply", xyz, pred_full, n_labels,  self._dataset)
         
         return xyz, pred_full
 
 
 # # **How to use the Class**
 
-# ## Initialize the model
+# ## Initialize the model and Load the Weights
 
-# In[18]:
-
-
-MODEL_PATH = 'results/s3dis/bw/cv1/model.pth.tar'
-model_config = 'gru_10_0,f_13'
-edge_attribs = 'delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d'
-pc_attribs = 'xyzelspvXYZ'
+# In[3]:
 
 
-# In[19]:
+MODEL_PATH = 'results/s3dis/bw/cv1_aug_bs4/model.pth.tar'
+dataset = 'helix'
 
 
-model = PointCloudSegmentation(MODEL_PATH, model_config, edge_attribs, pc_attribs)
+# In[4]:
 
 
-# 
-# ## Load the Weights
-
-# In[20]:
-
-
-model.load_model()
+model = PointCloudSegmentation(MODEL_PATH, dataset)
 
 
 # ## Segment the Point Cloud
 
-# In[16]:
+# In[28]:
 
 
-xyz, xyz_labels = model.process('data/test/data/m1pys/test_02.ply', dataset = 'helix') #set visualize to True if you want to write out the segmented point cloud.
+xyz, xyz_labels = model.process('data/TEST/data/test/test_12.ply', save_model = False) #set save_model to True if you want to write out the segmented point cloud. 
 
-
-# ## Or reading an existing file
 
 # In[21]:
 
 
-xyz, xyz_labels = model.load_prediction('data/test', 'm1pys/test_02', 'test_02_predictions.h5')
+xyz, xyz_labels = model.load_prediction('data/TEST', 'test/test_12', 'test_13_predictions.h5')
+
+
+# ## Running Inferences independantly on neighbour rooms and displaying results together
+
+# In[11]:
+
+
+xyz4, xyz_labels4 = model.load_prediction('data/TEST', 'test/A1crop_12', 'A1crop_12_predictions.h5')
+xyz1, xyz_labels1 = model.load_prediction('data/TEST', 'test/A1crop_13', 'A1crop_13_predictions.h5')
+xyz2, xyz_labels2 = model.load_prediction('data/TEST', 'test/A1crop_21', 'A1crop_21_predictions.h5')
+xyz3, xyz_labels3 = model.load_prediction('data/TEST', 'test/A1crop_22', 'A1crop_22_predictions.h5')
+
+# when partitioned, the rooms are moved to the origin, need to offset them for the display
+# i.e need to memorize how rooms are positionned from each other
+xyz1[:,0] += 6
+xyz1[:,1] += 0
+xyz2[:,0] += 0
+xyz2[:,1] += 6
+xyz3[:,0] += 6
+xyz3[:,1] += 6
+
+# Putting everything back togeter
+XYZ = []
+XYZ_labels = []
+XYZ.append(xyz1)
+XYZ.append(xyz2)
+XYZ.append(xyz3)
+XYZ.append(xyz4)
+XYZ_labels.append(xyz_labels1)
+XYZ_labels.append(xyz_labels2)
+XYZ_labels.append(xyz_labels3)
+XYZ_labels.append(xyz_labels4)
+
+# converting a list of list into a list then from a list to an array
+XYZ = np.asarray([item for sublist in XYZ for item in sublist])
+XYZ_labels = np.asarray([item for sublist in XYZ_labels for item in sublist])
 
 
 # ## Visualisation
 
-# In[22]:
+# In[29]:
 
 
-model.display(xyz, xyz_labels, dataset = 'helix')
+model.display(xyz, xyz_labels)
 
