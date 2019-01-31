@@ -260,7 +260,7 @@ with open(INPUT_FILE, 'r') as in_file:
 # In[5]:
 
 
-print('=========================== 1 =======================================')
+# adding a stride
 for number in range(1,7):
     INPUT_FILE = '../S3DIS_full/Area_{}.txt'.format(number) 
     print(INPUT_FILE)
@@ -289,93 +289,6 @@ for number in range(1,7):
             x,y,z = X[0], X[1], X[2]
             r,g,b = X[3].astype('uint8'), X[4].astype('uint8'), X[5].astype('uint8')
             ol = X[6].astype('uint8') 
-            if y-ymin <= 0 :
-                row = 1
-            else :
-                row = math.ceil((y-ymin)/6)
-            if x-xmin <= 0 :
-                col = 1
-            else :
-                col = math.ceil((x-xmin)/6)
-
-            outfile = rooms['outfile_{}_{}'.format(row, col)]
-            with open(outfile, 'a') as out_file:
-                out_file.write(str(x)+' '+str(y)+' '+str(z)+' '+str(r)+' '+str(g)+' '+str(b)+' '+str(ol)+'\n' )
-                out_file.close()
-
-print('=========================== 2 =======================================')        
-for number in range(1,7):
-    INPUT_FILE = '../S3DIS_full/Area_{}.txt'.format(number) 
-    print(INPUT_FILE)
-    cloud = open3d.read_point_cloud(INPUT_FILE,  format='xyz')
-
-    minbox = cloud.get_min_bound()
-    maxbox = cloud.get_max_bound()
-
-    xmin = minbox[0]
-    ymin = minbox[1] - 3
-    xmax = maxbox[0]
-    ymax = maxbox[1] + 3
-
-    w = math.ceil((xmax-xmin)/6)
-    h = math.ceil((ymax-ymin)/6)
-    print(' width : {} ; height : {}'.format(w,h))
-    rooms = {}
-    for y in range(1,h+1):
-        for x in range(1,w+1):
-            rooms['outfile_{}_{}'.format(y,x)]=  '../data/custom_S3DIS_augmented/data/Area_{}/Bcrop_{}_{}.txt'.format(number,y,x)
-
-    delimiter = ' ' 
-    with open(INPUT_FILE, 'r') as in_file:
-        for line in in_file:
-            X = np.array(line.split(delimiter), dtype='float32')
-            x,y,z = X[0], X[1], X[2]
-            r,g,b = X[3].astype('uint8'), X[4].astype('uint8'), X[5].astype('uint8')
-            ol = X[6].astype('uint8')
-            if y-ymin <= 0 :
-                row = 1
-            else :
-                row = math.ceil((y-ymin)/6)
-            if x-xmin <= 0 :
-                col = 1
-            else :
-                col = math.ceil((x-xmin)/6)
-
-            outfile = rooms['outfile_{}_{}'.format(row, col)]
-            with open(outfile, 'a') as out_file:
-                out_file.write(str(x)+' '+str(y)+' '+str(z)+' '+str(r)+' '+str(g)+' '+str(b)+' '+str(ol)+'\n' )
-                out_file.close()
-    
-    
-print('=========================== 3 =======================================')
-for number in range(1,7):
-    INPUT_FILE = '../S3DIS_full/Area_{}.txt'.format(number) 
-    print(INPUT_FILE)
-    cloud = open3d.read_point_cloud(INPUT_FILE,  format='xyz')
-
-    minbox = cloud.get_min_bound()
-    maxbox = cloud.get_max_bound()
-
-    xmin = minbox[0] - 3
-    ymin = minbox[1] - 3
-    xmax = maxbox[0] + 3
-    ymax = maxbox[1] + 3
-
-    w = math.ceil((xmax-xmin)/6)
-    h = math.ceil((ymax-ymin)/6)
-    print(' width : {} ; height : {}'.format(w,h))
-    rooms = {}
-    for y in range(1,h+1):
-        for x in range(1,w+1):
-            rooms['outfile_{}_{}'.format(y,x)]=  '../data/custom_S3DIS_augmented/data/Area_{}/Ccrop_{}_{}.txt'.format(number,y,x)
-
-    delimiter = ' ' 
-    with open(INPUT_FILE, 'r') as in_file:
-        for line in in_file:
-            X = np.array(line.split(delimiter), dtype='float32')
-            x,y,z = X[0], X[1], X[2]
-            r,g,b = X[3].astype('uint8'), X[4].astype('uint8'), X[5].astype('uint8')
-            ol = X[6].astype('uint8')
             if y-ymin <= 0 :
                 row = 1
             else :

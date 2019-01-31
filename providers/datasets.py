@@ -52,7 +52,7 @@ class HelixDataset:
             'inv_class_map': {value:key for (key,value) in self.labels.items()},
         }
     
-    def get_data(self, args, filename, folder_s, test_seed_offset=0):
+    def get_data_for_inference_only(self, args, filename, folder_s, test_seed_offset=0):
         """ get data for inference """
         # Load superpoints graphs
         testlist, trainlist = [], []

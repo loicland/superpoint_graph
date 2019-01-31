@@ -653,7 +653,7 @@ class PointCloudSegmentation(object):
 # In[3]:
 
 
-MODEL_PATH = 'results/s3dis/bw/cv1_3bis/model.pth.tar'
+MODEL_PATH = 'results/s3dis/bw/cv1_aug_bs4/model.pth.tar'
 dataset = 'helix'
 
 
@@ -668,13 +668,13 @@ model = PointCloudSegmentation(MODEL_PATH, dataset)
 # In[28]:
 
 
-xyz, xyz_labels = model.process('data/TEST/data/test/A1_19_20_28_29.ply', save_model = False) #set save_model to True if you want to write out the segmented point cloud. 
+xyz, xyz_labels = model.process('data/TEST/data/test/test_12.ply', save_model = False) #set save_model to True if you want to write out the segmented point cloud. 
 
 
-# In[26]:
+# In[21]:
 
 
-xyz, xyz_labels = model.load_prediction('data/TEST', 'test/A1_19_20_28_29', 'A1_19_20_28_29_predictions.h5')
+xyz, xyz_labels = model.load_prediction('data/TEST', 'test/test_12', 'test_13_predictions.h5')
 
 
 # ## Running Inferences independantly on neighbour rooms and displaying results together
