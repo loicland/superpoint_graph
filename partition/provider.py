@@ -283,9 +283,9 @@ def read_las(filename):
     except NameError:
         raise ValueError("laspy package not found. uncomment import in /partition/provider and make sure it is installed in your environment")
     N_points = len(inFile)
-    x = np.reshape(inFile.X, (N_points,1))
-    y = np.reshape(inFile.Y, (N_points,1))
-    z = np.reshape(inFile.Z, (N_points,1))
+    x = np.reshape(inFile.x, (N_points,1))
+    y = np.reshape(inFile.y, (N_points,1))
+    z = np.reshape(inFile.z, (N_points,1))
     xyz = np.hstack((x,y,z)).astype('f4')
     return xyz
 #------------------------------------------------------------------------------
