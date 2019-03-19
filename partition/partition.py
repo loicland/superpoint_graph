@@ -40,10 +40,10 @@ if args.dataset == 's3dis':
 elif args.dataset == 'sema3d':
     folders = ["test_reduced/", "test_full/", "train/"]
     n_labels = 8
-elif 'helix' in args.dataset.lower():
+elif args.dataset == 'helix':
     sys.path.append('./providers')
     from datasets import *
-    helix_data = HelixDataset()
+    helix_data = CustomHelixDataset()
     folders = helix_data.folders
     n_labels = len(helix_data.labels.keys())
 elif args.dataset == 'custom_s3dis':
@@ -89,7 +89,7 @@ for folder in folders:
                 if os.path.isdir(os.path.join(data_folder,o))]
     elif args.dataset=='sema3d':
         files = glob.glob(data_folder+"*.txt")
-    elif 'helix' in args.dataset.lower():
+    elif args.dataset == 'helix':
         files = glob.glob(os.path.join(data_folder,'*'+helix_data.extension))
     elif args.dataset=='custom_s3dis':
         files = glob.glob(os.path.join(data_folder+'*'+s3dis_data.extension))
@@ -119,7 +119,7 @@ for folder in folders:
             cloud_file = cloud_folder+ file_name_short
             fea_file   = fea_folder  + file_name_short + '.h5'
             spg_file   = spg_folder  + file_name_short + '.h5'
-        elif 'helix' in args.dataset.lower():
+        elif args.dataset == 'helix':
             data_file   = data_folder      + file_name + helix_data.extension
             cloud_file  = cloud_folder     + file_name
             fea_file    = fea_folder       + file_name + '.h5'
@@ -158,10 +158,10 @@ for folder in folders:
                 else:
                     xyz, rgb = read_semantic3d_format(data_file, 0, '', args.voxel_width, args.ver_batch)
                     labels = []
-            elif 'helix' in args.dataset.lower():
-                xyz = helix_data.read_pointcloud(data_file).astype(dtype='float32')
+            elif args.dataset == 'helix':
+                xyz, labels = helix_data.read_custom_helix_format(data_file)
                 if args.voxel_width > 0:
-                    xyz = libply_c.prune(xyz, args.voxel_width, np.zeros(xyz.shape,dtype='u1'), np.array(1,dtype='u1'), 0)[0]
+                    xyz = libply_c.prune(xyz, args.voxel_width, np.zeros(xyz.shape,dtype='u1'), labels, n_labels)[0]
                 labels = []
                 rgb = []
             elif args.dataset=='custom_s3dis':
@@ -206,9 +206,9 @@ for folder in folders:
             elif args.dataset=='sema3d':
                 features = geof
                 geof[:,3] = 2. * geof[:, 3]
-            elif 'helix' in args.dataset.lower():
+            elif args.dataset == 'helix':
                 features = geof
-                geof[:,3] = 2. * geof[:, 3]
+                features[:,3] = 2. * features[:, 3]
             elif args.dataset=='custom_s3dis':
                 features = geof
                 features[:,3] = 2. * features[:, 3]

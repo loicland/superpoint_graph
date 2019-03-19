@@ -161,7 +161,129 @@ class HelixDataset:
                             ii = random.sample(range(idx.size), k=10000)
                             idx = idx[ii]
 
-                        hf.create_dataset(name='{:d}'.format(c), data=P[idx,...])               
+                        hf.create_dataset(name='{:d}'.format(c), data=P[idx,...])
+
+class CustomHelixDataset:
+
+    def __init__(self):
+        self.name = "custom_helix"
+        self.folders = ["Area_1 - JTC/", "Area_2 - 1225_charleston/"]
+        self.extension = ".txt"
+        self.labels = {
+            'ceiling': 1,
+            'clutter': 2,
+            'column': 3,
+            'door': 4,
+            'floor': 5,
+            'furniture': 6,
+            'glasswall': 7,
+            'light': 8,
+            'other': 9,
+            'wall': 10,
+            'window': 11,
+            'stairs': 12
+        }
+    
+    def get_info(self,args):
+        edge_attribs = args.edge_attribs
+        pc_attribs = args.pc_attribs
+        edge_feats = 0
+        for attrib in edge_attribs.split(','):
+            a = attrib.split('/')[0]
+            if a in ['delta_avg', 'delta_std', 'xyz']:
+                edge_feats += 3
+            else:
+                edge_feats += 1
+
+        return {
+            'node_feats': 14 if pc_attribs=='' else len(pc_attribs),
+            'edge_feats': edge_feats,
+            'classes': 14,
+            'inv_class_map': {value:key for (key,value) in self.labels.items()},
+        }
+    
+    def get_datasets(self, args, test_seed_offset=0):
+        """ Gets training and test datasets. """
+        # Load superpoints graphs
+        testlist, trainlist = [], []
+        for n in range(len(self.folders)):
+            if n != args.cvfold :
+                path = '{}/superpoint_graphs/{}/'.format(args.S3DIS_PATH, self.folders[n])
+                for fname in sorted(os.listdir(path)):
+                    if fname.endswith(".h5"):
+                        trainlist.append(spg.spg_reader(args, path + fname, True))
+        
+        """path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, 5)
+        for fname in sorted(os.listdir(path)):
+            if fname.endswith(".h5"):
+                trainlist.append(spg.spg_reader(args, path + fname, True))"""
+        
+        path = '{}/superpoint_graphs/{}/'.format(args.S3DIS_PATH, self.folders[args.cvfold])
+        for fname in sorted(os.listdir(path)):
+            if fname.endswith(".h5"):
+                testlist.append(spg.spg_reader(args, path + fname, True))
+        # Normalize edge features
+        if args.spg_attribs01:
+            trainlist, testlist = spg.scaler01(trainlist, testlist)
+
+        return tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in trainlist],
+                                        functools.partial(spg.loader, train=True, args=args, db_path=args.S3DIS_PATH)), \
+               tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in testlist],
+                                        functools.partial(spg.loader, train=False, args=args, db_path=args.S3DIS_PATH, test_seed_offset=test_seed_offset))
+    
+    def read_custom_helix_format(self, raw_path, label_out=True):
+    #S3DIS specific
+        """extract data from a room folder"""
+        room_ver = np.genfromtxt(raw_path, delimiter=' ')
+        xyz = np.array(room_ver[:, 0:3], dtype='float32')
+        if not label_out:
+            return xyz
+        # label has to start with 1 and not 0, so add 1 if start with 0
+        room_labels = np.array(room_ver[:, 3], dtype='uint8')
+        # Align x,y,z with origin
+        xyz = xyz  - np.min(xyz,axis=0,keepdims=True)
+        return xyz, room_labels
+    
+    def preprocess_pointclouds(self, ROOT_PATH, pc_attribs):
+        """ Preprocesses data by splitting them by components and normalizing."""
+        for n,folder in enumerate(self.folders):
+            pathP = os.path.join(ROOT_PATH,'parsed',folder)
+            pathD = os.path.join(ROOT_PATH,'features',folder)
+            pathC = os.path.join(ROOT_PATH,'superpoint_graphs',folder)
+            if not os.path.exists(pathP):
+                os.makedirs(pathP)
+            random.seed(n)
+            for file in os.listdir(pathC):
+                print(folder+file)
+                if file.endswith(".h5"):
+                    f = h5py.File(pathD + file, 'r')
+                    xyz = f['xyz'][:]
+                    elpsv = np.stack([ f['xyz'][:,2][:], f['linearity'][:], f['planarity'][:], f['scattering'][:], f['verticality'][:] ], axis=1)
+
+                    # rescale to [-0.5,0.5]; keep xyz # need to be aligned with the origin beforehand
+                    elpsv[:,0] = elpsv[:,0] / np.max(elpsv[:,0]) - 0.5 
+                    elpsv[:,1:] -= 0.5
+
+                    if pc_attribs == 'xyzelpsvXYZ':
+                        ma, mi = np.max(xyz,axis=0,keepdims=True), np.min(xyz,axis=0,keepdims=True)
+                        xyzn = (xyz - mi) / (ma - mi + 1e-8)   # as in PointNet ("normalized location as to the room (from 0 to 1)")
+                        rgb = np.zeros((xyz.shape[0],3))
+                        P = np.concatenate([xyz, rgb,elpsv, xyzn], axis=1)
+                    elif pc_attribs == 'xyzelpsv':
+                        rgb = np.zeros((xyz.shape[0],3))
+                        P = np.concatenate([xyz, rgb,elpsv], axis=1)
+
+                    f = h5py.File(os.path.join(pathC, file), 'r')
+                    numc = len(f['components'].keys())
+
+                    with h5py.File(os.path.join(pathP, file), 'w') as hf:
+                        for c in range(numc):
+                            idx = f['components/{:d}'.format(c)][:].flatten()
+                            if idx.size > 10000: # trim extra large segments, just for speed-up of loading time
+                                ii = random.sample(range(idx.size), k=10000)
+                                idx = idx[ii]
+
+                            hf.create_dataset(name='{:d}'.format(c), data=P[idx,...])
     
 
 class CustomS3DISDataset:

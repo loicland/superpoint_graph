@@ -142,6 +142,11 @@ def main():
         #s3dis_data.preprocess_pointclouds(args.S3DIS_PATH, args.pc_attribs)
         dbinfo = s3dis_data.get_info(args)
         create_dataset = s3dis_data.get_datasets
+    elif args.dataset == 'helix':
+        helix_data = CustomHelixDataset()
+        #s3dis_data.preprocess_pointclouds(args.S3DIS_PATH, args.pc_attribs)
+        dbinfo = helix_data.get_info(args)
+        create_dataset = helix_data.get_datasets
     elif args.dataset=='custom_dataset':
         import custom_dataset #<- to write!
         dbinfo = custom_dataset.get_info(args)

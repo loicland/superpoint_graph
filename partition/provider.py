@@ -125,7 +125,7 @@ def get_color_from_label(object_label, dataset):
             12: [ 81, 109, 114], #'board'   ->  grey
             13: [233, 233, 229], #'clutter'  ->  light grey
             }.get(object_label, -1)
-    elif (dataset == 'helix'): #helix and custom data
+    """elif (dataset == 'helix'): #helix and custom data, old training using s3dis
         object_label = {
             0: [ 233, 229, 107], #'ceiling' .-> .yellow
             1: [  95, 156, 196], #'floor' .-> . blue
@@ -142,6 +142,22 @@ def get_color_from_label(object_label, dataset):
             12: [233, 233, 229], #'clutter'  ->  light grey
             13: [199, 101, 176], #'stairs'  ->  light purple
             14: [0   ,   0,   0], #unlabelled .->. black
+            }.get(object_label, 14)"""
+    elif (dataset == 'helix'): #helix and custom data
+        object_label = {
+            1: [ 233, 229, 107], #'ceiling' .-> .yellow
+            2: [ 81, 109, 114], #'clutter' .-> . grey
+            3: [ 179, 116,  81], #'column'  ->  brown
+            4: [  81, 163, 148], #'door'  ->  bluegreen
+            5: [ 241, 149, 131], #'floor'  ->  salmon
+            6: [  77, 174,  84], #'furniture'  ->  bright green
+            7: [ 108, 135,  75], #'glasswall'   ->  dark green
+            8: [  79,  79,  76], #'light'  ->  dark grey
+            9: [  41,  49, 101], #'other'  ->  darkblue
+            10: [223,  52,  52], #'wall'  ->  red
+            11: [ 89,  47,  95], #'window'  ->  purple
+            12: [  95, 156, 196], #'stairs'   ->  blue
+            0: [0   ,   0,   0], #unlabelled .->. black
             }.get(object_label, 14)
     elif (dataset == 'sema3d'): #Semantic3D
         object_label =  {
