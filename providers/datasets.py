@@ -167,7 +167,7 @@ class CustomHelixDataset:
 
     def __init__(self):
         self.name = "custom_helix"
-        self.folders = ["Area_1 - JTC/", "Area_2 - 1225_charleston/"]
+        self.folders = ["Area_0 - Validation/", "Area_1 - JTC/", "Area_2 - 1225_charleston/"]
         self.extension = ".txt"
         self.labels = {
             'ceiling': 1,
@@ -207,7 +207,7 @@ class CustomHelixDataset:
         # Load superpoints graphs
         testlist, trainlist = [], []
         for n in range(len(self.folders)):
-            if n != args.cvfold :
+            if n != args.cvfold - 1 :                
                 path = '{}/superpoint_graphs/{}/'.format(args.S3DIS_PATH, self.folders[n])
                 for fname in sorted(os.listdir(path)):
                     if fname.endswith(".h5"):
