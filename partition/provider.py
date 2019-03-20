@@ -127,6 +127,7 @@ def get_color_from_label(object_label, dataset):
             }.get(object_label, -1)
     elif (dataset == 'helix'): #helix and custom data
         object_label = {
+            0: [0   ,   0,   0], #unlabelled .->. black
             1: [ 233, 229, 107], #'ceiling' .-> .yellow
             2: [ 81, 109, 114], #'clutter' .-> . grey
             3: [ 179, 116,  81], #'column'  ->  brown
@@ -138,9 +139,8 @@ def get_color_from_label(object_label, dataset):
             9: [  41,  49, 101], #'other'  ->  darkblue
             10: [223,  52,  52], #'wall'  ->  red
             11: [ 89,  47,  95], #'window'  ->  purple
-            12: [  95, 156, 196], #'stairs'   ->  blue
-            0: [0   ,   0,   0], #unlabelled .->. black
-            }.get(object_label, 0)
+            12: [  95, 156, 196], #'stairs'   ->  blue       
+            }.get(object_label, -1)
     elif (dataset == 'sema3d'): #Semantic3D
         object_label =  {
             0: [0   ,   0,   0], #unlabelled .->. black
@@ -192,24 +192,39 @@ def read_s3dis_format(raw_path, label_out=True):
         i_object = i_object + 1
     return xyz, rgb, room_labels
 #------------------------------------------------------------------------------
-def object_name_to_label(object_class):
+def object_name_to_label(object_class, dataset):
     """convert from object name in S3DIS to an int"""
-    object_label = {
-        'ceiling': 1,
-        'floor': 2,
-        'wall': 3,
-        'column': 4,
-        'beam': 5,
-        'window': 6,
-        'door': 7,
-        'table': 8,
-        'chair': 9,
-        'bookcase': 10,
-        'sofa': 11,
-        'board': 12,
-        'clutter': 13,
-        'stairs': 0,
-        }.get(object_class, 0)
+    if dataset == 's3dis': #S3DIS
+        object_label = {
+            'ceiling': 1,
+            'floor': 2,
+            'wall': 3,
+            'column': 4,
+            'beam': 5,
+            'window': 6,
+            'door': 7,
+            'table': 8,
+            'chair': 9,
+            'bookcase': 10,
+            'sofa': 11,
+            'board': 12,
+            'clutter': 13,
+            'stairs': 0,
+            }.get(object_class, 0)
+    if dataset == 's3dis': #S3DIS
+        object_label = {
+            'ceiling': 1,
+            'clutter': 2,
+            'column': 3,
+            'door': 4,
+            'floor': 5,
+            'furniture': 6,
+            'glasswall': 7,
+            'light': 8,
+            'wall': 9,
+            'window': 10,
+            'stairs': 11,
+            }.get(object_class, 0)
     return object_label
 #------------------------------------------------------------------------------
 def read_semantic3d_format(data_file, n_class, file_label_path, voxel_width, ver_batch):

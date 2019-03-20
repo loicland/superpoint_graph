@@ -161,8 +161,7 @@ for folder in folders:
             elif args.dataset == 'helix':
                 xyz, labels = helix_data.read_custom_helix_format(data_file)
                 if args.voxel_width > 0:
-                    xyz = libply_c.prune(xyz, args.voxel_width, np.zeros(xyz.shape,dtype='u1'), labels, n_labels)[0]
-                labels = []
+                    xyz, _, labels = libply_c.prune(xyz, args.voxel_width, np.zeros(xyz.shape,dtype='u1'), labels, n_labels)
                 rgb = []
             elif args.dataset=='custom_s3dis':
                 xyz, rgb, labels = s3dis_data.read_custom_s3dis_format(data_file)

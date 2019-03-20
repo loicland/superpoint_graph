@@ -17,7 +17,7 @@ class HelixDataset:
 
     def __init__(self):
         self.name = "helix_v1"
-        self.folders = ["test/"]
+        self.folders = ["Area_0 - Validation/", "Area_1 - JTC/", "Area_2 - 1225_charleston/"]
         self.extension = ".ply"
         self.labels = {
             'ceiling': 0,
@@ -61,9 +61,9 @@ class HelixDataset:
             testlist.append(spg.spg_reader(args, path + filename, True))
             
         # need to load the whole training set if we want to normalize the edge feature wrt to the stats of the training set.
-        for n in range(1,7):
+        for n in range(len(self.folders)):
             if n != args.cvfold:
-                path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, n)
+                path = '{}/superpoint_graphs/{}/'.format(args.S3DIS_PATH, self.folders[n])
                 for fname in sorted(os.listdir(path)):
                     if fname.endswith(".h5"):
                         trainlist.append(spg.spg_reader(args, path + fname, True))
@@ -198,7 +198,7 @@ class CustomHelixDataset:
         return {
             'node_feats': 14 if pc_attribs=='' else len(pc_attribs),
             'edge_feats': edge_feats,
-            'classes': 14,
+            'classes': 12,
             'inv_class_map': {value:key for (key,value) in self.labels.items()},
         }
     
@@ -218,7 +218,7 @@ class CustomHelixDataset:
             if fname.endswith(".h5"):
                 trainlist.append(spg.spg_reader(args, path + fname, True))"""
         
-        path = '{}/superpoint_graphs/{}/'.format(args.S3DIS_PATH, self.folders[args.cvfold])
+        path = '{}/superpoint_graphs/{}/'.format(args.S3DIS_PATH, self.folders[args.cvfold - 1])
         for fname in sorted(os.listdir(path)):
             if fname.endswith(".h5"):
                 testlist.append(spg.spg_reader(args, path + fname, True))
