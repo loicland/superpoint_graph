@@ -20,20 +20,18 @@ class HelixDataset:
         self.folders = ["Area_0 - Validation/", "Area_1 - JTC/", "Area_2 - 1225_charleston/"]
         self.extension = ".ply"
         self.labels = {
-            'ceiling': 0,
-            'floor': 1,
-            'wall': 2,
+            'ceiling': 1,
+            'clutter': 2,
             'column': 3,
-            'beam': 4,
-            'window': 5,
-            'door': 6,
-            'table': 7,
-            'chair': 8,
-            'bookcase': 9,
-            'sofa': 10,
-            'board': 11,
-            'clutter': 12,
-            'stairs': 13
+            'door': 4,
+            'floor': 5,
+            'furniture': 6,
+            'glasswall': 7,
+            'light': 8,
+            'other': 9,
+            'wall': 10,
+            'window': 11,
+            'stairs': 12
         }
     
     def get_info(self,edge_attribs,pc_attribs):
@@ -48,7 +46,7 @@ class HelixDataset:
         return {
             'node_feats': 14 if pc_attribs=='' else len(pc_attribs),
             'edge_feats': edge_feats,
-            'classes': 14,
+            'classes': 12,
             'inv_class_map': {value:key for (key,value) in self.labels.items()},
         }
     

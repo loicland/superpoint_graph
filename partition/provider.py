@@ -211,7 +211,7 @@ def object_name_to_label(object_class, dataset):
             'clutter': 13,
             'stairs': 0,
             }.get(object_class, 0)
-    if dataset == 's3dis': #S3DIS
+    if dataset == 'helix': #S3DIS
         object_label = {
             'ceiling': 1,
             'clutter': 2,
@@ -221,9 +221,10 @@ def object_name_to_label(object_class, dataset):
             'furniture': 6,
             'glasswall': 7,
             'light': 8,
-            'wall': 9,
-            'window': 10,
-            'stairs': 11,
+            'other': 9,
+            'wall': 10,
+            'window': 11,
+            'stairs': 12
             }.get(object_class, 0)
     return object_label
 #------------------------------------------------------------------------------
