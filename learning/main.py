@@ -193,7 +193,8 @@ def main():
             optimizer.step()
 
             t_trainer = 1000*(time.time()-t0)
-            loss_meter.add(loss.data[0])
+            #loss_meter.add(loss.data[0]) # pytorch 0.3
+            loss_meter.add(loss.item()) # pytorch 0.4
 
             o_cpu, t_cpu, tvec_cpu = filter_valid(outputs.data.cpu().numpy(), label_mode_cpu.numpy(), label_vec_cpu.numpy())
             acc_meter.add(o_cpu, t_cpu)
