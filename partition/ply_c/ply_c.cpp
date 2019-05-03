@@ -195,9 +195,9 @@ PyObject *  prune(const bpn::ndarray & xyz ,float voxel_size, const bpn::ndarray
     if (have_labels)
         label_data = reinterpret_cast<uint8_t*>(labels.get_data());
     //---find min max of xyz----
-    float x_max = std::numeric_limits<float>::min(), x_min = std::numeric_limits<float>::max();
-    float y_max = std::numeric_limits<float>::min(), y_min = std::numeric_limits<float>::max();
-    float z_max = std::numeric_limits<float>::min(), z_min = std::numeric_limits<float>::max();
+    float x_max = std::numeric_limits<float>::lowest(), x_min = std::numeric_limits<float>::max();
+    float y_max = std::numeric_limits<float>::lowest(), y_min = std::numeric_limits<float>::max();
+    float z_max = std::numeric_limits<float>::lowest(), z_min = std::numeric_limits<float>::max();
     #pragma omp parallel for reduction(max : x_max, y_max, z_max), reduction(min : x_min, y_min, z_min)
     for (std::size_t i_ver = 0; i_ver < n_ver; i_ver ++)
     {
