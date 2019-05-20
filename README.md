@@ -119,7 +119,7 @@ To train on the whole publicly available data and test on the reduced test set, 
 ```
 CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $SEMA3D_DIR --db_test_name testred --db_train_name trainval \
 --epochs 500 --lr_steps '[350, 400, 450]' --test_nth_epoch 100 --model_config 'gru_10,f_8' --ptn_nfeat_stn 11 \
---nworkers 2 --odir "results/sema3d/trainval_best"
+--nworkers 2 --pc_attrib xyzrgbelpsv --odir "results/sema3d/trainval_best"
 ```
 The trained network can be downloaded [here](http://imagine.enpc.fr/~simonovm/largescale/model_sema3d_trainval.pth.tar) and loaded with `--resume` argument. Rename the file ```model.pth.tar``` (do not try to unzip it!) and place it in the directory ```results/sema3d/trainval_best```.
 
@@ -127,13 +127,13 @@ To test this network on the full test set, run
 ```
 CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $SEMA3D_DIR --db_test_name testfull --db_train_name trainval \
 --epochs -1 --lr_steps '[350, 400, 450]' --test_nth_epoch 100 --model_config 'gru_10,f_8' --ptn_nfeat_stn 11 \
---nworkers 2 --odir "results/sema3d/trainval_best" --resume RESUME
+--nworkers 2 --pc_attrib xyzrgbelpsv --odir "results/sema3d/trainval_best" --resume RESUME
 ```
 
 We validated our configuration on a custom split of 11 and 4 clouds. The network is trained as such:
 ```
 CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $SEMA3D_DIR --epochs 450 --lr_steps '[350, 400]' --test_nth_epoch 100 \
---model_config 'gru_10,f_8' --ptn_nfeat_stn 11 --nworkers 2 --odir "results/sema3d/best"
+--model_config 'gru_10,f_8' --pc_attrib xyzrgbelpsv --ptn_nfeat_stn 11 --nworkers 2 --odir "results/sema3d/best"
 ```
 
 To upsample the prediction to the unpruned data and write the .labels files for the reduced test set, run:
