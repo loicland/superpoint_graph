@@ -79,6 +79,10 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
                        edg3r, edg4r ,edg5r, edg6r))
     del edg1, edg2, edg3, edg4 ,edg5, edg6, edg1r, edg2r, edg3r, edg4r, edg5r, edg6r
     edges = np.unique(edges, axis=1)
+    
+    if d_max > 0:
+        dist = np.sqrt(((xyz[edges[0,:]]-xyz[edges[1,:]])**2).sum(1))
+        edges = edges[:,dist<d_max]
     #---sort edges by alpha numeric order wrt to the components of their source/target---
     n_edg = len(edges[0])
     edge_comp = in_component[edges]
@@ -167,7 +171,7 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
         graph["se_point_count_ratio"][i_sedg] = graph["sp_point_count"][com_source] / (graph["sp_point_count"][com_target] + 1e-6)
         #---compute the offset set---
         delta = xyz_source - xyz_target
-        if len(delta > 1):
+        if len(delta) > 1:
             graph["se_delta_mean"][i_sedg] = np.mean(delta, axis=0)
             graph["se_delta_std"][i_sedg] = np.std(delta, axis=0)
             graph["se_delta_norm"][i_sedg] = np.mean(np.sqrt(np.sum(delta ** 2, axis=1)))
