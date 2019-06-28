@@ -9,7 +9,7 @@ import sys
 import numpy as np
 import argparse
 from timeit import default_timer as timer
-sys.path.append("./partition/cut-pursuit/src")
+sys.path.append("./partition/cut-pursuit/build/src")
 sys.path.append("./partition/ply_c")
 sys.path.append("./partition")
 import libcp
