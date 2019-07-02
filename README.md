@@ -12,7 +12,9 @@ This is the official PyTorch implementation of our paper *Large-scale Point Clou
 * `./learning/*` - Learning code (superpoint embedding and contextual segmentation).
 
 
-## Requirements
+## Requirements 
+0. Download current version of the repository. We recommend using the `--recurse-submodules` option to make sure the [cut pursuit](https://github.com/loicland/cut-pursuit) module used in `/partition` is downloaded in the process. Wether you did not used the following command, please, refer to point 4. <br>
+`git clone --recurse-submodules https://github.com/Pandinosaurus/superpoint_graph`
 
 1. Install [PyTorch](https://pytorch.org) and [torchnet](https://github.com/pytorch/tnt) with `pip install git+https://github.com/pytorch/tnt.git@master`. Pytorch 0.4 is not tested and might cause errors.
 
@@ -20,7 +22,13 @@ This is the official PyTorch implementation of our paper *Large-scale Point Clou
 
 3. Install Boost (1.63.0 or newer) and Eigen3, in Conda: `conda install -c anaconda boost; conda install -c omnia eigen3; conda install eigen; conda install -c r libiconv`.
 
-4. Make sure that cut pursuit was downloaded. Otherwise, clone [this repository](https://github.com/loicland/cut-pursuit) in `/partition`
+4. Make sure that cut pursuit was downloaded. Otherwise, clone [this repository](https://github.com/loicland/cut-pursuit) or add it as a submodule in `/partition`. <br>
+```
+cd superpoint_graph/partition/
+git submodule init
+git submodule update --remote cut-pursuit
+```
+
 
 5. Compile the ```libply_c``` and ```libcp``` libraries:
 ```
