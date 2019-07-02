@@ -142,7 +142,7 @@ First, reorganize point clouds into superpoints by:
 python learning/sema3d_dataset.py --SEMA3D_PATH $SEMA3D_DIR
 ```
 
-To train on the whole publicly available data and test on the reduced test set, run
+To train on the whole publicly available data and test on the reduced test set, run:
 ```
 CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $SEMA3D_DIR --db_test_name testred --db_train_name trainval \
 --epochs 500 --lr_steps '[350, 400, 450]' --test_nth_epoch 100 --model_config 'gru_10,f_8' --ptn_nfeat_stn 11 \
@@ -150,7 +150,7 @@ CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $S
 ```
 The trained network can be downloaded [here](http://imagine.enpc.fr/~simonovm/largescale/model_sema3d_trainval.pth.tar) and loaded with `--resume` argument. Rename the file ```model.pth.tar``` (do not try to unzip it!) and place it in the directory ```results/sema3d/trainval_best```.
 
-To test this network on the full test set, run
+To test this network on the full test set, run:
 ```
 CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $SEMA3D_DIR --db_test_name testfull --db_train_name trainval \
 --epochs -1 --lr_steps '[350, 400, 450]' --test_nth_epoch 100 --model_config 'gru_10,f_8' --ptn_nfeat_stn 11 \
@@ -172,7 +172,6 @@ To visualize the results and intermediary steps (on the subsampled graph), use t
 ```
 python partition/visualize.py --dataset sema3d --ROOT_PATH $SEMA3D_DIR --res_file 'results/sema3d/trainval_best/prediction_testred' --file_path 'test_reduced/MarketplaceFeldkirch_Station4' --output_type ifprs
 ```
-
 avoid ```--upsample 1``` as it can can take a very long time on the largest clouds.
 
 # Other data sets
