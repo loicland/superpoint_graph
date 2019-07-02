@@ -13,27 +13,27 @@ This is the official PyTorch implementation of our paper *Large-scale Point Clou
 
 
 ## Requirements 
-*0.* Download current version of the repository. We recommend using the `--recurse-submodules` option to make sure the [cut pursuit](https://github.com/loicland/cut-pursuit) module used in `/partition` is downloaded in the process. Wether you did not used the following command, please, refer to point 4. <br>
+*0.* Download current version of the repository. We recommend using the `--recurse-submodules` option to make sure the [cut pursuit](https://github.com/loicland/cut-pursuit) module used in `/partition` is downloaded in the process. Wether you did not used the following command, please, refer to point 4: <br>
 ```
 git clone --recurse-submodules https://github.com/Pandinosaurus/superpoint_graph
 ```
 
-*1.* Install [PyTorch](https://pytorch.org) and [torchnet](https://github.com/pytorch/tnt). Note that Pytorch 0.4 was not tested and might cause errors.
+*1.* Install [PyTorch](https://pytorch.org) and [torchnet](https://github.com/pytorch/tnt). Note that Pytorch 0.4 was not tested and might cause errors:
 ```
 pip install git+https://github.com/pytorch/tnt.git@master
 ``` 
 
-*2.* Install additional Python packages.
+*2.* Install additional Python packages:
 ```
 pip install future python-igraph tqdm transforms3d pynvrtc fastrlock cupy h5py sklearn plyfile scipy
 ```
 
-*3.* Install Boost (1.63.0 or newer) and Eigen3, in Conda.<br>
+*3.* Install Boost (1.63.0 or newer) and Eigen3, in Conda:<br>
 ```
 conda install -c anaconda boost; conda install -c omnia eigen3; conda install eigen; conda install -c r libiconv
 ```
 
-*4.* Make sure that cut pursuit was downloaded. Otherwise, clone [this repository](https://github.com/loicland/cut-pursuit) or add it as a submodule in `/partition`. <br>
+*4.* Make sure that cut pursuit was downloaded. Otherwise, clone [this repository](https://github.com/loicland/cut-pursuit) or add it as a submodule in `/partition`: <br>
 ```
 cd partition
 git submodule init
@@ -85,7 +85,7 @@ First, reorganize point clouds into superpoints by:
 python learning/s3dis_dataset.py --S3DIS_PATH $S3DIR_DIR
 ```
 
-To train on the all 6 folds, run
+To train on the all 6 folds, run:
 ```
 for FOLD in 1 2 3 4 5 6; do \
 CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset s3dis --S3DIS_PATH $S3DIR_DIR --cvfold $FOLD --epochs 350 --lr_steps '[275,320]' \
@@ -94,7 +94,7 @@ done
 ```
 The trained networks can be downloaded [here](http://imagine.enpc.fr/~simonovm/largescale/models_s3dis.zip), unzipped and loaded with `--resume` argument.
 
-To test this network on the full test set, run
+To test this network on the full test set, run:
 ```
 for FOLD in 1 2 3 4 5 6; do \
 CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset s3dis --S3DIS_PATH $S3DIR_DIR --cvfold $FOLD --epochs -1 --lr_steps '[275,320]' \
@@ -129,7 +129,7 @@ Download all point clouds and labels from [Semantic3D Dataset](http://www.semant
 
 ### Partition
 
-To compute the partition run
+To compute the partition run:
 ```
 python partition/partition.py --dataset sema3d --ROOT_PATH $SEMA3D_DIR --voxel_width 0.05 --reg_strength 0.8 --ver_batch 5000000
 ```
@@ -138,7 +138,6 @@ It is recommended that you have at least 24GB of RAM to run this code. Otherwise
 ### Training
 
 First, reorganize point clouds into superpoints by:
-
 ```
 python learning/sema3d_dataset.py --SEMA3D_PATH $SEMA3D_DIR
 ```
@@ -165,8 +164,9 @@ CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset sema3d --SEMA3D_PATH $S
 ```
 
 To upsample the prediction to the unpruned data and write the .labels files for the reduced test set, run:
-
-```python partition/write_Semantic3d.py --SEMA3D_PATH $SEMA3D_DIR --odir "results/sema3d/trainval_best" --db_test_name testred```
+```
+python partition/write_Semantic3d.py --SEMA3D_PATH $SEMA3D_DIR --odir "results/sema3d/trainval_best" --db_test_name testred
+```
 
 To visualize the results and intermediary steps (on the subsampled graph), use the visualize function in partition. For example:
 ```
