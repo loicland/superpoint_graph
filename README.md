@@ -23,7 +23,7 @@ git clone --recurse-submodules https://github.com/Pandinosaurus/superpoint_graph
 pip install git+https://github.com/pytorch/tnt.git@master
 ``` 
 
-*2.* Install additional Python packages: 
+*2.* Install additional Python packages.
 ```
 pip install future python-igraph tqdm transforms3d pynvrtc fastrlock cupy h5py sklearn plyfile scipy
 ```
@@ -35,11 +35,10 @@ conda install -c anaconda boost; conda install -c omnia eigen3; conda install ei
 
 *4.* Make sure that cut pursuit was downloaded. Otherwise, clone [this repository](https://github.com/loicland/cut-pursuit) or add it as a submodule in `/partition`. <br>
 ```
-cd superpoint_graph/partition/
+cd partition
 git submodule init
 git submodule update --remote cut-pursuit
 ```
-
 
 *5.* Compile the ```libply_c``` and ```libcp``` libraries:
 ```
@@ -68,19 +67,23 @@ Common sources of error and how to fix them:
 Download [S3DIS Dataset](http://buildingparser.stanford.edu/dataset.html) and extract `Stanford3dDataset_v1.2_Aligned_Version.zip` to `$S3DIR_DIR/data`, where `$S3DIR_DIR` is set to dataset directory.
 
 To fix some issues with the dataset as reported in issue [#29](https://github.com/loicland/superpoint_graph/issues/29), apply path `S3DIS_fix.diff` with:
-```cp S3DIS_fix.diff $S3DIR_DIR/data; cd $S3DIR_DIR/data; git apply S3DIS_fix.diff; rm S3DIS_fix.diff; cd -```
+```
+cp S3DIS_fix.diff $S3DIR_DIR/data; cd $S3DIR_DIR/data; git apply S3DIS_fix.diff; rm S3DIS_fix.diff; cd -
+```
 
 ### Partition
 
-To compute the partition run
-
-```python partition/partition.py --dataset s3dis --ROOT_PATH $S3DIR_DIR --voxel_width 0.03 --reg_strength 0.03```
+To compute the partition run:
+```
+python partition/partition.py --dataset s3dis --ROOT_PATH $S3DIR_DIR --voxel_width 0.03 --reg_strength 0.03
+```
 
 ### Training
 
 First, reorganize point clouds into superpoints by:
-
-```python learning/s3dis_dataset.py --S3DIS_PATH $S3DIR_DIR```
+```
+python learning/s3dis_dataset.py --S3DIS_PATH $S3DIR_DIR
+```
 
 To train on the all 6 folds, run
 ```
@@ -100,7 +103,9 @@ done
 ```
 
 To evaluate quantitavily on the full set on a trained model type: 
-```python learning/evaluate_s3dis.py --odir results/s3dis/best --cvfold 123456``` 
+```
+python learning/evaluate_s3dis.py --odir results/s3dis/best --cvfold 123456
+``` 
 
 To visualize the results and all intermediary steps, use the visualize function in partition. For example:
 ```
@@ -125,16 +130,18 @@ Download all point clouds and labels from [Semantic3D Dataset](http://www.semant
 ### Partition
 
 To compute the partition run
-
-```python partition/partition.py --dataset sema3d --ROOT_PATH $SEMA3D_DIR --voxel_width 0.05 --reg_strength 0.8 --ver_batch 5000000```
-
+```
+python partition/partition.py --dataset sema3d --ROOT_PATH $SEMA3D_DIR --voxel_width 0.05 --reg_strength 0.8 --ver_batch 5000000
+```
 It is recommended that you have at least 24GB of RAM to run this code. Otherwise, increase the ```voxel_width``` parameter to increase pruning.
 
 ### Training
 
 First, reorganize point clouds into superpoints by:
 
-```python learning/sema3d_dataset.py --SEMA3D_PATH $SEMA3D_DIR```
+```
+python learning/sema3d_dataset.py --SEMA3D_PATH $SEMA3D_DIR
+```
 
 To train on the whole publicly available data and test on the reduced test set, run
 ```
