@@ -18,23 +18,22 @@ This is the official PyTorch implementation of our paper *Large-scale Point Clou
 git clone --recurse-submodules https://github.com/Pandinosaurus/superpoint_graph
 ```
 
-1. Install [PyTorch](https://pytorch.org) and [torchnet](https://github.com/pytorch/tnt):
+*1.* Install [PyTorch](https://pytorch.org) and [torchnet](https://github.com/pytorch/tnt). Note that Pytorch 0.4 was not tested and might cause errors.
 ```
 pip install git+https://github.com/pytorch/tnt.git@master
 ``` 
-Note that Pytorch 0.4 was not tested and might cause errors.
 
-2. Install additional Python packages: 
+*2.* Install additional Python packages: 
 ```
 pip install future python-igraph tqdm transforms3d pynvrtc fastrlock cupy h5py sklearn plyfile scipy
 ```
 
-3. Install Boost (1.63.0 or newer) and Eigen3, in Conda: <br>
+*3.* Install Boost (1.63.0 or newer) and Eigen3, in Conda.<br>
 ```
 conda install -c anaconda boost; conda install -c omnia eigen3; conda install eigen; conda install -c r libiconv
 ```
 
-4. Make sure that cut pursuit was downloaded. Otherwise, clone [this repository](https://github.com/loicland/cut-pursuit) or add it as a submodule in `/partition`: <br>
+*4.* Make sure that cut pursuit was downloaded. Otherwise, clone [this repository](https://github.com/loicland/cut-pursuit) or add it as a submodule in `/partition`. <br>
 ```
 cd superpoint_graph/partition/
 git submodule init
@@ -42,7 +41,7 @@ git submodule update --remote cut-pursuit
 ```
 
 
-5. Compile the ```libply_c``` and ```libcp``` libraries:
+*5.* Compile the ```libply_c``` and ```libcp``` libraries:
 ```
 cd partition/ply_c
 cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.6m.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.6m -DBOOST_INCLUDEDIR=$CONDAENV/include -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
@@ -62,7 +61,7 @@ Common sources of error and how to fix them:
 - $CONDA_ENV is not defined : define it or replace $CONDA_ENV by the absolute path of your environment (find it with ```locate anaconda```)
 - anaconda uses a different version of python than 3.6m : adapt it in the command. Find which version of python conda is using with ```locate anaconda3/lib/libpython```
 - you are using boost 1.62 or older: update it
-- cut pursuit did not download: manually clone it in the ```partition``` folder.
+- cut pursuit did not download: manually clone it in the ```partition``` folder or add it as a submodule as proposed in the requirements, point 4.
 
 ## S3DIS
 
