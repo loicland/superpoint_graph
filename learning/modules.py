@@ -89,8 +89,8 @@ class GRUCellEx(nn.GRUCell):
         self._layernorm = layernorm
         self._ingate = ingate
         if layernorm:
-            self.add_module('ini', nn.InstanceNorm1d(1, eps=1e-5, affine=False, track_running_stats=False))
-            self.add_module('inh', nn.InstanceNorm1d(1, eps=1e-5, affine=False, track_running_stats=False))
+            self.add_module('ini', nn.InstanceNorm1d(1, eps=1e-5, affine=False, track_running_stats=True))
+            self.add_module('inh', nn.InstanceNorm1d(1, eps=1e-5, affine=False, track_running_stats=True))
         if ingate:
             self.add_module('ig', nn.Linear(hidden_size, input_size, bias=True))
 
