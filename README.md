@@ -15,7 +15,7 @@ This is the official PyTorch implementation of our paper *Large-scale Point Clou
 ## Requirements 
 *0.* Download current version of the repository. We recommend using the `--recurse-submodules` option to make sure the [cut pursuit](https://github.com/loicland/cut-pursuit) module used in `/partition` is downloaded in the process. Wether you did not used the following command, please, refer to point 4: <br>
 ```
-git clone --recurse-submodules https://github.com/Pandinosaurus/superpoint_graph
+git clone --recurse-submodules https://github.com/loicland/superpoint_graph
 ```
 
 *1.* Install [PyTorch](https://pytorch.org) and [torchnet](https://github.com/pytorch/tnt). Note that Pytorch 0.4 was not tested and might cause errors:
