@@ -30,6 +30,8 @@ def get_dtype(t):
 def get_kernel_func(kname, ksrc, dtype):
     if kname+dtype not in modules:
         ksrc = ksrc.replace('DTYPE', dtype)
+        #prog = Program(ksrc.encode('utf-8'), (kname+dtype+'.cu').encode('utf-8'))
+        #uncomment the line above and comment the line below if it causes the following error: AttributeError: 'Program' object has no attribute '_program'
         prog = Program(ksrc, kname+dtype+'.cu')
         ptx = prog.compile()
         log = prog._interface.nvrtcGetProgramLog(prog._program)
