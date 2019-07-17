@@ -334,7 +334,10 @@ def resume(args, dbinfo):
     model = create_model(checkpoint['args'], dbinfo) #use original arguments, architecture can't change
     optimizer = create_optimizer(args, model)
     
-    model.load_state_dict(checkpoint['state_dict'])
+    #model.load_state_dict(checkpoint['state_dict'])
+    #to ensure compatbility of previous trained models with new InstanceNormD behavior comment line below and uncomment line above if not using our trained  models
+    model.load_state_dict({k:checkpoint['state_dict'][k] for k in checkpoint['state_dict'] if k not in ['ecc.0._cell.inh.running_mean','ecc.0._cell.inh.running_var','ecc.0._cell.ini.running_mean','ecc.0._cell.ini.running_var']})
+
     if 'optimizer' in checkpoint: optimizer.load_state_dict(checkpoint['optimizer'])
     for group in optimizer.param_groups: group['initial_lr'] = args.lr
     args.start_epoch = checkpoint['epoch']
