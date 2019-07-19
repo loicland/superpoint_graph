@@ -27,27 +27,31 @@ def get_datasets(args, test_seed_offset=0):
     elif args.db_train_name == 'trainval':
         trainset = ['train/' + f for f in train_names + valid_names]
 
-    if args.db_test_name == 'val':
-        testset = ['train/' + f for f in valid_names]
+    if args.use_val_set:
+        validset = ['train/' + f for f in valid_names]
     elif args.db_test_name == 'testred':
         testset = ['test_reduced/' + os.path.splitext(f)[0] for f in os.listdir(args.SEMA3D_PATH + '/superpoint_graphs/test_reduced')]
     elif args.db_test_name == 'testfull':
         testset = ['test_full/' + os.path.splitext(f)[0] for f in os.listdir(args.SEMA3D_PATH + '/superpoint_graphs/test_full')]
 
     # Load superpoints graphs
-    testlist, trainlist = [], []
+    testlist, trainlist, validlist = [], [],  []
     for n in trainset:
         trainlist.append(spg.spg_reader(args, args.SEMA3D_PATH + '/superpoint_graphs/' + n + '.h5', True))
+    for n in validset:
+        validlist.append(spg.spg_reader(args, args.SEMA3D_PATH + '/superpoint_graphs/' + n + '.h5', True))
     for n in testset:
         testlist.append(spg.spg_reader(args, args.SEMA3D_PATH + '/superpoint_graphs/' + n + '.h5', True))
 
     # Normalize edge features
     if args.spg_attribs01:
-        trainlist, testlist = spg.scaler01(trainlist, testlist)
+        trainlist, testlist, validlist = spg.scaler01(trainlist, testlist, validlist=validlist)
 
     return tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in trainlist],
                                     functools.partial(spg.loader, train=True, args=args, db_path=args.SEMA3D_PATH)), \
            tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in testlist],
+                                    functools.partial(spg.loader, train=False, args=args, db_path=args.SEMA3D_PATH, test_seed_offset=test_seed_offset)), \
+           tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in validlist],
                                     functools.partial(spg.loader, train=False, args=args, db_path=args.SEMA3D_PATH, test_seed_offset=test_seed_offset))
 
 def get_info(args):
@@ -65,8 +69,31 @@ def get_info(args):
         'classes': 8,
         'inv_class_map': {0:'terrain_man', 1:'terrain_nature', 2:'veget_hi', 3:'veget_low', 4:'building', 5:'scape', 6:'artefact', 7:'cars'},
     }
-
-
+    
+def get_info(args):
+    edge_feats = 0
+    for attrib in args.edge_attribs.split(','):
+        a = attrib.split('/')[0]
+        if a in ['delta_avg', 'delta_std', 'xyz']:
+            edge_feats += 3
+        else:
+            edge_feats += 1
+    if args.loss_weights == 'none':
+        weights = np.ones((13,),dtype='f4')
+    else:
+        weights = h5py.File(args.S3DIS_PATH + "/parsed/class_count.h5")["class_count"][:].astype('f4')
+        weights = weights[:,[i for i in range(6) if i != args.cvfold-1]].sum(1)
+        weights = weights.mean()/weights
+    if args.loss_weights == 'sqrt':
+        weights = np.sqrt(weights)
+    weights = torch.from_numpy(weights).cuda() if args.cuda else torch.from_numpy(weights)
+    return {
+        'node_feats': 14 if args.pc_attribs=='' else len(args.pc_attribs),
+        'edge_feats': edge_feats,
+        'class_weights': weights,
+        'classes': 8,
+        'inv_class_map': {0:'terrain_man', 1:'terrain_nature', 2:'veget_hi', 3:'veget_low', 4:'building', 5:'scape', 6:'artefact', 7:'cars'},
+    }
 
 def preprocess_pointclouds(SEMA3D_PATH):
     """ Preprocesses data by splitting them by components and normalizing."""
@@ -85,7 +112,7 @@ def preprocess_pointclouds(SEMA3D_PATH):
                 f = h5py.File(pathD + file, 'r')
                 xyz = f['xyz'][:]
                 rgb = f['rgb'][:].astype(np.float)
-                elpsv = np.stack([ f['xyz'][:,2][:], f['linearity'][:], f['planarity'][:], f['scattering'][:], f['verticality'][:] ], axis=1)
+                elpsv = np.stack([f['xyz'][:,2][:], f['geof'][:]], axis=1)
 
                 # rescale to [-0.5,0.5]; keep xyz
                 elpsv[:,0] /= 100 # (rough guess)
@@ -98,6 +125,7 @@ def preprocess_pointclouds(SEMA3D_PATH):
                 numc = len(f['components'].keys())
 
                 with h5py.File(pathP + file, 'w') as hf:
+                    hf.create_dataset(name='centroid',data=xyz.mean(0))
                     for c in range(numc):
                         idx = f['components/{:d}'.format(c)][:].flatten()
                         if idx.size > 10000: # trim extra large segments, just for speed-up of loading time

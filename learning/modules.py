@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as nnf
 from torch.autograd import Variable
-import ecc
+from learning import ecc
 
 
 class RNNGraphConvModule(nn.Module):
@@ -102,10 +102,10 @@ class GRUCellEx(nn.GRUCell):
 
     def forward(self, input, hidden):
         if self._ingate:
-            input = nnf.sigmoid(self._modules['ig'](hidden)) * input
+            input = torch.sigmoid(self._modules['ig'](hidden)) * input
 
         # GRUCell in https://github.com/pytorch/pytorch/blob/master/torch/nn/_functions/rnn.py extended with layer normalization
-        if input.is_cuda:
+        if input.is_cuda and torch.__version__.split('.')[0]=='0':
             gi = nnf.linear(input, self.weight_ih)
             gh = nnf.linear(hidden, self.weight_hh)
             gi, gh = self._normalize(gi, gh)
@@ -121,9 +121,9 @@ class GRUCellEx(nn.GRUCell):
         i_r, i_i, i_n = gi.chunk(3, 1)
         h_r, h_i, h_n = gh.chunk(3, 1)
 
-        resetgate = nnf.sigmoid(i_r + h_r)
-        inputgate = nnf.sigmoid(i_i + h_i)
-        newgate = nnf.tanh(i_n + resetgate * h_n)
+        resetgate = torch.sigmoid(i_r + h_r)
+        inputgate = torch.sigmoid(i_i + h_i)
+        newgate = torch.tanh(i_n + resetgate * h_n)
         hy = newgate + inputgate * (hidden - newgate)
         return hy
 
@@ -157,10 +157,10 @@ class LSTMCellEx(nn.LSTMCell):
 
     def forward(self, input, hidden):
         if self._ingate:
-            input = nnf.sigmoid(self._modules['ig'](hidden[0])) * input
+            input = torch.sigmoid(self._modules['ig'](hidden[0])) * input
 
         # GRUCell in https://github.com/pytorch/pytorch/blob/master/torch/nn/_functions/rnn.py extended with layer normalization
-        if input.is_cuda:
+        if input.is_cuda and torch.__version__.split('.')[0]=='0':
             gi = nnf.linear(input, self.weight_ih)
             gh = nnf.linear(hidden[0], self.weight_hh)
             gi, gh = self._normalize(gi, gh)
@@ -175,13 +175,13 @@ class LSTMCellEx(nn.LSTMCell):
         gi, gh = self._normalize(gi, gh)
 
         ingate, forgetgate, cellgate, outgate = (gi+gh).chunk(4, 1)
-        ingate = nnf.sigmoid(ingate)
-        forgetgate = nnf.sigmoid(forgetgate)
-        cellgate = nnf.tanh(cellgate)
-        outgate = nnf.sigmoid(outgate)
+        ingate = torch.sigmoid(ingate)
+        forgetgate = torch.sigmoid(forgetgate)
+        cellgate = torch.tanh(cellgate)
+        outgate = torch.sigmoid(outgate)
 
         cy = (forgetgate * hidden[1]) + (ingate * cellgate)
-        hy = outgate * nnf.tanh(cy)
+        hy = outgate * torch.tanh(cy)
         return hy, cy
 
     def __repr__(self):

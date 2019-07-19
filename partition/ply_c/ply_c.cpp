@@ -11,6 +11,8 @@
 #include <boost/tuple/tuple_comparison.hpp>
 #include <limits>
 #include <map>
+#include "connected_components.cpp"
+#include "random_subgraph.cpp"
 
 namespace bp = boost::python;
 namespace ei = Eigen;
@@ -19,11 +21,14 @@ namespace bpn = boost::python::numpy;
 typedef ei::Matrix<float, 3, 3> Matrix3f;
 typedef ei::Matrix<float, 3, 1> Vector3f;
 
-typedef boost::tuple< std::vector< std::vector<float> >, std::vector< std::vector<uint8_t> >, std::vector<std::vector<uint32_t> > > Custom_tuple;
+typedef boost::tuple< std::vector< std::vector<float> >, std::vector< std::vector<uint8_t> >, std::vector< std::vector<uint32_t> >, std::vector<std::vector<uint32_t> > > Custom_tuple;
+typedef boost::tuple< std::vector< std::vector<uint32_t> >, std::vector<uint32_t> > Components_tuple;
+typedef boost::tuple< std::vector<uint8_t>, std::vector<uint8_t> > Subgraph_tuple;
+
 typedef boost::tuple< uint32_t, uint32_t, uint32_t > Space_tuple;
 
 struct VecToArray
-{//converts a vector<uint32_t> to a numpy array
+{//converts a vector<uint8_t> to a numpy array
     static PyObject * convert(const std::vector<uint8_t> & vec) {
     npy_intp dims = vec.size();
     PyObject * obj = PyArray_SimpleNew(1, &dims, NPY_UINT8);
@@ -58,6 +63,38 @@ struct VecvecToArray
     }
 };
 
+struct VecToArray32
+{//converts a vector<uint32_t> to a numpy array
+    static PyObject * convert(const std::vector<uint32_t> & vec)
+    {
+        npy_intp dims = vec.size();
+        PyObject * obj = PyArray_SimpleNew(1, &dims, NPY_UINT32);
+        void * arr_data = PyArray_DATA((PyArrayObject*)obj);
+        memcpy(arr_data, &vec[0], dims * sizeof(uint32_t));
+        return obj;
+    }
+};
+
+
+template<class T>
+struct VecvecToList
+{//converts a vector< vector<T> > to a list
+        static PyObject* convert(const std::vector< std::vector<T> > & vecvec)
+    {
+        boost::python::list* pylistlist = new boost::python::list();
+        for(size_t i = 0; i < vecvec.size(); i++)
+        {
+            boost::python::list* pylist = new boost::python::list();
+            for(size_t j = 0; j < vecvec[i].size(); j++)
+            {
+                pylist->append(vecvec[i][j]);
+            }
+            pylistlist->append((pylist, pylist[0]));
+        }
+        return pylistlist->ptr();
+    }
+};
+
 struct to_py_tuple
 {//converts to a python tuple
     static PyObject* convert(const Custom_tuple & c_tuple){
@@ -66,10 +103,44 @@ struct to_py_tuple
         PyObject * pyo1 = VecvecToArray<float>::convert(c_tuple.get<0>());
         PyObject * pyo2 = VecvecToArray<uint8_t>::convert(c_tuple.get<1>());
         PyObject * pyo3 = VecvecToArray<uint32_t>::convert(c_tuple.get<2>());
+        PyObject * pyo4 = VecvecToArray<uint32_t>::convert(c_tuple.get<3>());
 
         values.append(bp::handle<>(bp::borrowed(pyo1)));
         values.append(bp::handle<>(bp::borrowed(pyo2)));
         values.append(bp::handle<>(bp::borrowed(pyo3)));
+        values.append(bp::handle<>(bp::borrowed(pyo4)));
+
+        return bp::incref( bp::tuple( values ).ptr() );
+    }
+};
+
+struct to_py_tuple_components
+{//converts output to a python tuple
+    static PyObject* convert(const Components_tuple& c_tuple){
+        bp::list values;
+        //add all c_tuple items to "values" list
+
+        PyObject * vecvec_pyo = VecvecToList<uint32_t>::convert(c_tuple.get<0>());
+        PyObject * vec_pyo = VecToArray32::convert(c_tuple.get<1>());
+
+        values.append(bp::handle<>(bp::borrowed(vecvec_pyo)));
+        values.append(bp::handle<>(bp::borrowed(vec_pyo)));
+
+        return bp::incref( bp::tuple( values ).ptr() );
+    }
+};
+
+struct to_py_tuple_subgraph
+{//converts output to a python tuple
+    static PyObject* convert(const Subgraph_tuple& s_tuple){
+        bp::list values;
+        //add all c_tuple items to "values" list
+
+        PyObject * vec_pyo1 = VecToArray::convert(s_tuple.get<0>());
+        PyObject * vec_pyo2 = VecToArray::convert(s_tuple.get<1>());
+
+        values.append(bp::handle<>(bp::borrowed(vec_pyo1)));
+        values.append(bp::handle<>(bp::borrowed(vec_pyo2)));
 
         return bp::incref( bp::tuple( values ).ptr() );
     }
@@ -83,6 +154,7 @@ class AttributeGrid {
     std::vector< std::vector<float> > acc_xyz;//accumulate the position of the points
     std::vector< std::vector<uint32_t> > acc_rgb;//accumulate the color of the points
     std::vector< std::vector<uint32_t> > acc_labels;//accumulate the label of the points
+    std::vector< std::vector<uint32_t> > acc_objects;//accumulate the object indices of the points
   public:
     AttributeGrid():
        index(0)
@@ -119,12 +191,13 @@ class AttributeGrid {
         return this->space_tuple_to_index.end();
     }
     //---methods for accumulating atributes---
-    void initialize(uint8_t n_class)
+    void initialize(uint8_t n_labels, int n_objects)
     {//must be run once space_tuple_to_index is complete and the number of non-empty voxels is known
         bin_count  = std::vector<uint32_t>(this->index, 0);
         acc_xyz    = std::vector< std::vector<float> >(this->index, std::vector <float>(3,0));
         acc_rgb    = std::vector< std::vector<uint32_t> >(this->index, std::vector <uint32_t>(3,0));
-        acc_labels = std::vector< std::vector<uint32_t> >(this->index, std::vector <uint32_t>(n_class+1,0));
+        acc_labels = std::vector< std::vector<uint32_t> >(this->index, std::vector <uint32_t>(n_labels+1,0));
+        acc_objects = std::vector< std::vector<uint32_t> >(this->index, std::vector <uint32_t>(n_objects+1,0));
     }
     uint32_t get_count(uint64_t voxel_index)
     {
@@ -142,8 +215,12 @@ class AttributeGrid {
     {
         return acc_labels.at(voxel_index);
     }
+    std::vector<uint32_t> get_acc_objects(uint64_t voxel_index)
+    {
+        return acc_objects.at(voxel_index);
+    }
     uint8_t get_label(uint64_t voxel_index)
-    {//return the majority label from ths voxel
+    {//return the majority label from this voxel
      //ignore the unlabeled points (0), unless all points are unlabeled
         std::vector<uint32_t> label_hist = acc_labels.at(voxel_index);
         std::vector<uint32_t>::iterator chosen_label = std::max_element(label_hist.begin() + 1, label_hist.end());
@@ -154,6 +231,20 @@ class AttributeGrid {
         else
         {
             return (uint8_t)std::distance(label_hist.begin(), chosen_label);
+        }
+    }
+    uint32_t get_object(uint64_t voxel_index)
+    {//return the majority object from this voxel
+     //ignore the unattributed points (0), unless all points are unattributed
+        std::vector<uint32_t> object_hist = acc_objects.at(voxel_index);
+        std::vector<uint32_t>::iterator chosen_object = std::max_element(object_hist.begin() + 1, object_hist.end());
+        if (*chosen_object == 0)
+        {
+            return 0;
+        }
+        else
+        {
+            return (uint32_t)std::distance(object_hist.begin(), chosen_object);
         }
     }
     void add_attribute(uint32_t x_bin, uint32_t  y_bin, uint32_t z_bin, float x, float y, float z, uint8_t r, uint8_t g, uint8_t b)
@@ -179,25 +270,43 @@ class AttributeGrid {
         acc_rgb.at(bin).at(2) = acc_rgb.at(bin).at(2) + b;
         acc_labels.at(bin).at(label) = acc_labels.at(bin).at(label) + 1;
     }
+    void add_attribute(uint32_t x_bin, uint32_t  y_bin, uint32_t z_bin, float x, float y, float z, uint8_t r, uint8_t g, uint8_t b, uint8_t label, uint32_t object)
+    {//add a point x y z in voxel x_bin y_bin z_bin - with label
+        uint32_t bin =get_index(x_bin, y_bin, z_bin);
+        bin_count.at(bin) = bin_count.at(bin) + 1;
+        acc_xyz.at(bin).at(0) = acc_xyz.at(bin).at(0) + x;
+        acc_xyz.at(bin).at(1) = acc_xyz.at(bin).at(1) + y;
+        acc_xyz.at(bin).at(2) = acc_xyz.at(bin).at(2) + z;
+        acc_rgb.at(bin).at(0) = acc_rgb.at(bin).at(0) + r;
+        acc_rgb.at(bin).at(1) = acc_rgb.at(bin).at(1) + g;
+        acc_rgb.at(bin).at(2) = acc_rgb.at(bin).at(2) + b;
+        acc_labels.at(bin).at(label) = acc_labels.at(bin).at(label) + 1;
+        acc_objects.at(bin).at(object) = acc_objects.at(bin).at(object) + 1;
+    }
 };
 
-PyObject *  prune(const bpn::ndarray & xyz ,float voxel_size, const bpn::ndarray & rgb, const bpn::ndarray & labels, const int n_classes)
+PyObject *  prune(const bpn::ndarray & xyz ,float voxel_size, const bpn::ndarray & rgb, const bpn::ndarray & labels, const bpn::ndarray & objects, const int n_labels, const int n_objects)
 {//prune the point cloud xyz with a regular voxel grid
     std::cout << "=========================" << std::endl;
     std::cout << "======== pruning ========" << std::endl;
     std::cout << "=========================" << std::endl;
     uint64_t n_ver = bp::len(xyz);
-    bool have_labels = n_classes>0;
+    bool have_labels = n_labels>0;
+    bool have_objects = n_objects>0;
     //---read the numpy arrays data---
     const float * xyz_data = reinterpret_cast<float*>(xyz.get_data());
     const uint8_t * rgb_data = reinterpret_cast<uint8_t*>(rgb.get_data());
     const uint8_t * label_data;
     if (have_labels)
         label_data = reinterpret_cast<uint8_t*>(labels.get_data());
+    const uint32_t * object_data;
+    if (have_objects)
+        object_data = reinterpret_cast<uint32_t*>(objects.get_data());
     //---find min max of xyz----
     float x_max = std::numeric_limits<float>::lowest(), x_min = std::numeric_limits<float>::max();
     float y_max = std::numeric_limits<float>::lowest(), y_min = std::numeric_limits<float>::max();
     float z_max = std::numeric_limits<float>::lowest(), z_min = std::numeric_limits<float>::max();
+
     #pragma omp parallel for reduction(max : x_max, y_max, z_max), reduction(min : x_min, y_min, z_min)
     for (std::size_t i_ver = 0; i_ver < n_ver; i_ver ++)
     {
@@ -224,17 +333,21 @@ PyObject *  prune(const bpn::ndarray & xyz ,float voxel_size, const bpn::ndarray
     }
     std::cout << "Reduced from " << n_ver << " to " << vox_grid.n_nonempty_voxels() << " points ("
               << std::ceil(10000 * vox_grid.n_nonempty_voxels() / n_ver)/100 << "%)" << std::endl;
-    vox_grid.initialize(n_classes);
+    vox_grid.initialize(n_labels, n_objects);
     //---accumulate points in the voxel map----
     for (std::size_t i_ver = 0; i_ver < n_ver; i_ver ++)
     {
         uint32_t bin_x = std::floor((xyz_data[3 * i_ver    ] - x_min) / voxel_size);
         uint32_t bin_y = std::floor((xyz_data[3 * i_ver + 1] - y_min) / voxel_size);
         uint32_t bin_z = std::floor((xyz_data[3 * i_ver + 2] - z_min) / voxel_size);
-        if (have_labels)
+        if (have_labels&&!have_objects)
             vox_grid.add_attribute(bin_x, bin_y, bin_z
                     , xyz_data[3 * i_ver], xyz_data[3 * i_ver + 1], xyz_data[3 * i_ver + 2]
                     , rgb_data[3 * i_ver], rgb_data[3 * i_ver + 1], rgb_data[3 * i_ver + 2], label_data[i_ver]);
+        else if(have_labels&&have_objects)
+            vox_grid.add_attribute(bin_x, bin_y, bin_z
+                    , xyz_data[3 * i_ver], xyz_data[3 * i_ver + 1], xyz_data[3 * i_ver + 2]
+                    , rgb_data[3 * i_ver], rgb_data[3 * i_ver + 1], rgb_data[3 * i_ver + 2], label_data[i_ver], object_data[i_ver]);
         else
             vox_grid.add_attribute(bin_x, bin_y, bin_z
                     , xyz_data[3 * i_ver], xyz_data[3 * i_ver + 1], xyz_data[3 * i_ver + 2]
@@ -243,7 +356,8 @@ PyObject *  prune(const bpn::ndarray & xyz ,float voxel_size, const bpn::ndarray
     //---compute pruned cloud----
     std::vector< std::vector< float > > pruned_xyz(vox_grid.n_nonempty_voxels(), std::vector< float >(3, 0.f));
     std::vector< std::vector< uint8_t > > pruned_rgb(vox_grid.n_nonempty_voxels(), std::vector< uint8_t >(3, 0));
-    std::vector< std::vector< uint32_t > > pruned_labels(vox_grid.n_nonempty_voxels(), std::vector< uint32_t >(n_classes + 1, 0));
+    std::vector< std::vector< uint32_t > > pruned_labels(vox_grid.n_nonempty_voxels(), std::vector< uint32_t >(n_labels + 1, 0));
+    std::vector< std::vector< uint32_t > > pruned_objects(vox_grid.n_nonempty_voxels(), std::vector< uint32_t >(n_objects + 1, 0));
     for (std::map<Space_tuple,uint64_t>::iterator it_vox=vox_grid.begin(); it_vox!=vox_grid.end(); ++it_vox)
     {//loop over the non-empty voxels and compute the average posiition/color + majority label
         uint64_t voxel_index = it_vox->second; //
@@ -260,8 +374,9 @@ PyObject *  prune(const bpn::ndarray & xyz ,float voxel_size, const bpn::ndarray
         col_uint8_t.at(2) = (uint8_t)((float) col.at(2) / count);
         pruned_rgb.at(voxel_index) = col_uint8_t;
         pruned_labels.at(voxel_index) = vox_grid.get_acc_labels(voxel_index);
+        pruned_objects.at(voxel_index) = vox_grid.get_acc_objects(voxel_index);
     }
-    return to_py_tuple::convert(Custom_tuple(pruned_xyz,pruned_rgb, pruned_labels));
+    return to_py_tuple::convert(Custom_tuple(pruned_xyz,pruned_rgb, pruned_labels, pruned_objects));
 }
 
 
@@ -346,6 +461,38 @@ PyObject * compute_geof(const bpn::ndarray & xyz ,const bpn::ndarray & target, i
     return VecvecToArray<float>::convert(geof);
 }
 
+
+PyObject * connected_comp(const uint32_t n_ver, const bpn::ndarray & source, const bpn::ndarray & target, const bpn::ndarray & active_edg, const int cutoff)
+{//read data and run the L0-cut pursuit partition algorithm
+    const uint32_t n_edg = bp::len(source);
+    const uint32_t * source_data = reinterpret_cast<uint32_t*>(source.get_data());
+    const uint32_t * target_data = reinterpret_cast<uint32_t*>(target.get_data());
+    const char * active_edg_data = reinterpret_cast<char*>(active_edg.get_data());
+
+    std::vector<uint32_t> in_component(n_ver,0);
+    std::vector< std::vector<uint32_t> > components(1,std::vector<uint32_t>());
+
+    connected_components(n_ver, n_edg, source_data, target_data, active_edg_data, in_component, components, cutoff);
+
+    return to_py_tuple_components::convert(Components_tuple(components, in_component));
+}
+
+
+PyObject * random_subgraph(const int n_ver, const bpn::ndarray & source, const bpn::ndarray & target, const int subgraph_size)
+{//read data and run the L0-cut pursuit partition algorithm
+
+    const int n_edg = bp::len(source);
+    const uint32_t * source_data = reinterpret_cast<uint32_t*>(source.get_data());
+    const uint32_t * target_data = reinterpret_cast<uint32_t*>(target.get_data());
+
+    std::vector<uint8_t> selected_edges(n_edg,0);
+    std::vector<uint8_t> selected_vertices(n_ver,0);
+
+    subgraph::random_subgraph(n_ver, n_edg, source_data, target_data, subgraph_size, selected_edges.data(), selected_vertices.data());
+
+    return to_py_tuple_subgraph::convert(Subgraph_tuple(selected_edges,selected_vertices));
+}
+
 using namespace boost::python;
 BOOST_PYTHON_MODULE(libply_c)
 {
@@ -356,4 +503,6 @@ BOOST_PYTHON_MODULE(libply_c)
     bpn::initialize();
     def("compute_geof", compute_geof);
     def("prune", prune);
+    def("connected_comp", connected_comp);
+    def("random_subgraph", random_subgraph);
 }

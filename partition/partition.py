@@ -119,9 +119,9 @@ for folder in folders:
             print("    creating the feature file...")
             #--- read the data files and compute the labels---
             if args.dataset=='s3dis':
-                xyz, rgb, labels = read_s3dis_format(data_file)
+                xyz, rgb, labels, objects = read_s3dis_format(data_file)
                 if args.voxel_width > 0:
-                    xyz, rgb, labels = libply_c.prune(xyz, args.voxel_width, rgb, labels, n_labels)
+                    xyz, rgb, labels, dump = libply_c.prune(xyz.astype('f4'), args.voxel_width, rgb.astype('uint8'), labels.astype('uint8'), np.zeros(1, dtype='uint8'), n_labels, 0)
             elif args.dataset=='sema3d':
                 label_file = data_folder + file_name + ".labels"
                 has_labels = (os.path.isfile(label_file))

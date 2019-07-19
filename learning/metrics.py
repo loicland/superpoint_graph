@@ -16,6 +16,10 @@ class ConfusionMatrix:
   def count_predicted_batch(self, ground_truth_vec, predicted): # added
     for i in range(ground_truth_vec.shape[0]):
       self.confusion_matrix[:,predicted[i]] += ground_truth_vec[i,:]
+     
+  def count_predicted_batch_hard(self, ground_truth_vec, predicted): # added
+    for i in range(ground_truth_vec.shape[0]):
+      self.confusion_matrix[ground_truth_vec[i],predicted[i]] += 1
 
   """labels are integers from 0 to number_of_labels-1"""
   def get_count(self, ground_truth, predicted):
@@ -71,26 +75,34 @@ class ConfusionMatrix:
         re = re + self.confusion_matrix[i][i] / max(1,np.sum(self.confusion_matrix[i,:]))
     return re/self.number_of_labels
 
-  # def build_conf_matrix_from_file(self, ground_truth_file, classified_file):
-  #   #read line by line without storing everything in ram
-  #   with open(ground_truth_file, "r") as f_gt, open(classified_file, "r") as f_cl:
-  #     for index, (line_gt, line_cl) in enumerate(izip(f_gt, f_cl)):
-  #        label_gt = int(line_gt))
-  #        label_cl_ = int(line_cl))
-  #        label_cl = max([min([label_cl_, 10000]), 1]) #protection against erroneous submissions: no infinite labels (for instance NaN) or classes smaller 1
-  #        if label_cl_ != label_cl:
-  #            return -1
-  #        max_label = max([label_gt, label_cl])
-  #        if max_label > self.number_of_labels:
-  #           #resize to larger confusion matrix
-  #           b = np.zeros((max_label,max_label))
-  #           for row in range(self.number_of_labels):
-  #             for column in range(self.number_of_labels):
-  #                b[row][column] = self.confusion_matrix[row][column]
-  #           self.confusion_matrix = b
-  #           self.number_of_labels = max_label
-  #
-  #        if label_gt == 0:
-  #           continue
-  #        self.confusion_matrix[label_gt - 1][label_cl - 1] += 1
-  #        return 0
+  def count_gt(self, ground_truth):
+      return self.confusion_matrix[ground_truth,:].sum()
+
+def compute_predicted_transitions(in_component, edg_source, edg_target):
+ 
+  pred_transitions = in_component[edg_source] != in_component[edg_target]
+  return pred_transitions
+
+#-----------------------------------------------------------
+def compute_boundary_recall(is_transition, pred_transitions):
+  return 100*((is_transition==pred_transitions)*is_transition).sum()/is_transition.sum()
+
+#-----------------------------------------------------------
+def compute_boundary_precision(is_transition, pred_transitions):
+  return 100*((is_transition==pred_transitions)*pred_transitions).sum()/pred_transitions.sum()
+#--------------------------------------------
+
+def mode(array, only_freq=False):
+  value, counts = np.unique(array, return_counts=True)
+  if only_freq:
+     return np.amax(counts)
+  else:
+     return value[np.argmax(counts)], np.amax(counts)
+#------------------------------------------------
+def compute_OOA(components, labels):
+  hard_labels = labels.argmax(1)
+  correct_labels=0
+  for comp in components:
+      dump, freq = mode(hard_labels[comp])
+      correct_labels+=freq
+  return 100*correct_labels/len(labels)

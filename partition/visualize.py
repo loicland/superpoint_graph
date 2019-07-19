@@ -16,6 +16,7 @@ parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic S
 parser.add_argument('--dataset', default='s3dis', help='dataset name: sema3d|s3dis')
 parser.add_argument('--ROOT_PATH', default='/mnt/bigdrive/loic/S3DIS', help='folder containing the ./data folder')
 parser.add_argument('--res_file', default='../models/cv1/predictions_val', help='folder containing the results')
+parser.add_argument('--supervized_partition',type=int,  default=0)
 parser.add_argument('--file_path', default='Area_1/conferenceRoom_1', help='file to output (must include the area / set in its path)')
 parser.add_argument('--upsample', default=0, type=int, help='if 1, upsample the prediction to the original cloud (if the files is huge it can take a very long and use a lot of memory - avoid on sema3d)')
 parser.add_argument('--ver_batch', default=0, type=int, help='Batch size for reading large files')
@@ -39,11 +40,14 @@ file_name = os.path.split(args.file_path)[1]
 if args.dataset == 's3dis':
     n_labels = 13
 if args.dataset == 'sema3d':
-    n_labels = 8    
+    n_labels = 8   
 if args.dataset == 'custom_dataset':
     n_labels = 10    
 #---load the values------------------------------------------------------------
-fea_file   = root + "features/"          + folder + file_name + '.h5'
+if args.supervized_partition:
+    fea_file   = root + "features_supervision/"          + folder + file_name + '.h5'
+else:
+    fea_file   = root + "features/"          + folder + file_name + '.h5'
 spg_file   = root + "superpoint_graphs/" + folder + file_name + '.h5'
 ply_folder = root + "clouds/"            + folder 
 ply_file   = ply_folder                  + file_name

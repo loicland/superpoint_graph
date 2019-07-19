@@ -28,11 +28,13 @@ from torch.optim.lr_scheduler import MultiStepLR
 from torch.autograd import Variable
 import torchnet as tnt
 
-import spg
-import graphnet
-import pointnet
-import metrics
+DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.join(DIR_PATH,'..'))
 
+from learning import spg
+from learning import graphnet
+from learning import pointnet
+from learning import metrics
 
 def main():
     parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs')
@@ -47,6 +49,7 @@ def main():
     parser.add_argument('--batch_size', default=2, type=int, help='Batch size')
     parser.add_argument('--optim', default='adam', help='Optimizer: sgd|adam')
     parser.add_argument('--grad_clip', default=1, type=float, help='Element-wise clipping of gradient. If 0, does not clip')
+    parser.add_argument('--loss_weights', default='none', help='[none, proportional, sqrt] how to weight the loss function')
 
     # Learning process arguments
     parser.add_argument('--cuda', default=1, type=int, help='Bool, use cuda')
@@ -61,9 +64,11 @@ def main():
     parser.add_argument('--odir', default='results', help='Directory to store results')
     parser.add_argument('--resume', default='', help='Loads a previously saved model.')
     parser.add_argument('--db_train_name', default='train')
-    parser.add_argument('--db_test_name', default='val')
+    parser.add_argument('--db_test_name', default='test')
+    parser.add_argument('--use_val_set', type=int, default=0)
     parser.add_argument('--SEMA3D_PATH', default='datasets/semantic3d')
     parser.add_argument('--S3DIS_PATH', default='datasets/s3dis')
+    parser.add_argument('--VKITTI_PATH', default='datasets/vkitti')
     parser.add_argument('--CUSTOM_SET_PATH', default='datasets/custom_set')
 
     # Model
@@ -72,7 +77,7 @@ def main():
     parser.add_argument('--edge_attribs', default='delta_avg,delta_std,nlength/ld,surface/ld,volume/ld,size/ld,xyz/d', help='Edge attribute definition, see spg_edge_features() in spg.py for definitions.')
 
     # Point cloud processing
-    parser.add_argument('--pc_attribs', default='', help='Point attributes fed to PointNets, if empty then all possible.')
+    parser.add_argument('--pc_attribs', default='xyzrgbelpsvXYZ', help='Point attributes fed to PointNets, if empty then all possible. xyz = coordinates, rgb = color, e = elevation, lpsv = geometric feature, d = distance to center')
     parser.add_argument('--pc_augm_scale', default=0, type=float, help='Training augmentation: Uniformly random scaling in [1/scale, scale]')
     parser.add_argument('--pc_augm_rot', default=1, type=int, help='Training augmentation: Bool, random rotation around z-axis')
     parser.add_argument('--pc_augm_mirror_prob', default=0, type=float, help='Training augmentation: Probability of mirroring about x or y axes')
@@ -131,6 +136,10 @@ def main():
         import s3dis_dataset
         dbinfo = s3dis_dataset.get_info(args)
         create_dataset = s3dis_dataset.get_datasets
+    elif args.dataset=='vkitti':
+        import vkitti_dataset
+        dbinfo = vkitti_dataset.get_info(args)
+        create_dataset = vkitti_dataset.get_datasets
     elif args.dataset=='custom_dataset':
         import custom_dataset #<- to write!
         dbinfo = custom_dataset.get_info(args)
@@ -147,7 +156,9 @@ def main():
         optimizer = create_optimizer(args, model)
         stats = []
 
-    train_dataset, test_dataset = create_dataset(args)
+    train_dataset, test_dataset, valid_dataset = create_dataset(args)
+
+    print('Train dataset: %i elements - Test dataset: %i elements - Validation dataset: %i elements' % (len(train_dataset),len(test_dataset),len(valid_dataset)))
     ptnCloudEmbedder = pointnet.CloudEmbedder(args)
     scheduler = MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_decay, last_epoch=args.start_epoch-1)
 
@@ -158,7 +169,7 @@ def main():
         model.train()
 
         loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=spg.eccpc_collate, num_workers=args.nworkers, shuffle=True, drop_last=True)
-        if logging.getLogger().getEffectiveLevel() > logging.DEBUG: loader = tqdm(loader, ncols=100)
+        if logging.getLogger().getEffectiveLevel() > logging.DEBUG: loader = tqdm(loader, ncols=65)
 
         loss_meter = tnt.meter.AverageValueMeter()
         acc_meter = tnt.meter.ClassErrorMeter(accuracy=True)
@@ -173,7 +184,6 @@ def main():
             label_mode_cpu, label_vec_cpu, segm_size_cpu = targets[:,0], targets[:,2:], targets[:,1:].sum(1)
             if args.cuda:
                 label_mode, label_vec, segm_size = label_mode_cpu.cuda(), label_vec_cpu.float().cuda(), segm_size_cpu.float().cuda()
-
             else:
                 label_mode, label_vec, segm_size = label_mode_cpu, label_vec_cpu.float(), segm_size_cpu.float()
 
@@ -183,7 +193,8 @@ def main():
             embeddings = ptnCloudEmbedder.run(model, *clouds_data)
             outputs = model.ecc(embeddings)
 
-            loss = nn.functional.cross_entropy(outputs, Variable(label_mode))
+            loss = nn.functional.cross_entropy(outputs, Variable(label_mode), weight=dbinfo["class_weights"])
+
             loss.backward()
             ptnCloudEmbedder.bw_hook()
 
@@ -200,36 +211,48 @@ def main():
             acc_meter.add(o_cpu, t_cpu)
             confusion_matrix.count_predicted_batch(tvec_cpu, np.argmax(o_cpu,1))
 
-            logging.debug('Batch loss %f, Loader time %f ms, Trainer time %f ms.', loss.data[0], t_loader, t_trainer)
+            logging.debug('Batch loss %f, Loader time %f ms, Trainer time %f ms.', loss.data.item(), t_loader, t_trainer)
             t0 = time.time()
 
         return acc_meter.value()[0], loss_meter.value()[0], confusion_matrix.get_overall_accuracy(), confusion_matrix.get_average_intersection_union()
 
     ############
-    def eval():
+    def eval(is_valid = False):
         """ Evaluated model on test set """
         model.eval()
-
-        loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, collate_fn=spg.eccpc_collate, num_workers=args.nworkers)
-        if logging.getLogger().getEffectiveLevel() > logging.DEBUG: loader = tqdm(loader, ncols=100)
+        
+        if is_valid: #validation
+            loader = torch.utils.data.DataLoader(valid_dataset, batch_size=1, collate_fn=spg.eccpc_collate, num_workers=args.nworkers)
+        else: #evaluation
+            loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, collate_fn=spg.eccpc_collate, num_workers=args.nworkers)
+            
+        if logging.getLogger().getEffectiveLevel() > logging.DEBUG: loader = tqdm(loader, ncols=65)
 
         acc_meter = tnt.meter.ClassErrorMeter(accuracy=True)
+        loss_meter = tnt.meter.AverageValueMeter()
         confusion_matrix = metrics.ConfusionMatrix(dbinfo['classes'])
 
         # iterate over dataset in batches
         for bidx, (targets, GIs, clouds_data) in enumerate(loader):
             model.ecc.set_info(GIs, args.cuda)
             label_mode_cpu, label_vec_cpu, segm_size_cpu = targets[:,0], targets[:,2:], targets[:,1:].sum(1).float()
+            if args.cuda:
+                label_mode, label_vec, segm_size = label_mode_cpu.cuda(), label_vec_cpu.float().cuda(), segm_size_cpu.float().cuda()
+            else:
+                label_mode, label_vec, segm_size = label_mode_cpu, label_vec_cpu.float(), segm_size_cpu.float()
 
             embeddings = ptnCloudEmbedder.run(model, *clouds_data)
             outputs = model.ecc(embeddings)
+            
+            loss = nn.functional.cross_entropy(outputs, Variable(label_mode), weight=dbinfo["class_weights"])
+            loss_meter.add(loss.item()) 
 
             o_cpu, t_cpu, tvec_cpu = filter_valid(outputs.data.cpu().numpy(), label_mode_cpu.numpy(), label_vec_cpu.numpy())
             if t_cpu.size > 0:
                 acc_meter.add(o_cpu, t_cpu)
                 confusion_matrix.count_predicted_batch(tvec_cpu, np.argmax(o_cpu,1))
 
-        return meter_value(acc_meter), confusion_matrix.get_overall_accuracy(), confusion_matrix.get_average_intersection_union(), confusion_matrix.get_mean_class_accuracy()
+        return meter_value(acc_meter), loss_meter.value()[0], confusion_matrix.get_overall_accuracy(), confusion_matrix.get_average_intersection_union(), confusion_matrix.get_mean_class_accuracy()
 
     ############
     def eval_final():
@@ -244,7 +267,7 @@ def main():
         for ss in range(args.test_multisamp_n):
             test_dataset_ss = create_dataset(args, ss)[1]
             loader = torch.utils.data.DataLoader(test_dataset_ss, batch_size=1, collate_fn=spg.eccpc_collate, num_workers=args.nworkers)
-            if logging.getLogger().getEffectiveLevel() > logging.DEBUG: loader = tqdm(loader, ncols=100)
+            if logging.getLogger().getEffectiveLevel() > logging.DEBUG: loader = tqdm(loader, ncols=65)
 
             # iterate over dataset in batches
             for bidx, (targets, GIs, clouds_data) in enumerate(loader):
@@ -280,49 +303,79 @@ def main():
 
     ############
     # Training loop
+    try:
+        best_iou = stats[-1]['best_iou']
+    except:
+        best_iou = 0
+    TRAIN_COLOR = '\033[0m'
+    VAL_COLOR = '\033[0;94m' 
+    TEST_COLOR = '\033[0;93m'
+    BEST_COLOR = '\033[0;92m'
+    epoch = args.start_epoch
+    
     for epoch in range(args.start_epoch, args.epochs):
         print('Epoch {}/{} ({}):'.format(epoch, args.epochs, args.odir))
         scheduler.step()
 
         acc, loss, oacc, avg_iou = train()
 
-        if (epoch+1) % args.test_nth_epoch == 0 or epoch+1==args.epochs:
-            acc_test, oacc_test, avg_iou_test, avg_acc_test = eval()
-            print('-> Train accuracy: {}, \tLoss: {}, \tTest accuracy: {}, \tTest oAcc: {}, \tTest avgIoU: {}'.format(acc, loss, acc_test, oacc_test, avg_iou_test))
-        else:
-            acc_test, oacc_test, avg_iou_test, avg_acc_test = 0, 0, 0, 0
-            print('-> Train accuracy: {}, \tLoss: {}'.format(acc, loss))
+        print(TRAIN_COLOR + '-> Train Loss: %1.4f   Train accuracy: %3.2f%%' % (loss, acc))
 
-        stats.append({'epoch': epoch, 'acc': acc, 'loss': loss, 'oacc': oacc, 'avg_iou': avg_iou, 'acc_test': acc_test, 'oacc_test': oacc_test, 'avg_iou_test': avg_iou_test, 'avg_acc_test': avg_acc_test})
+        new_best_model = False
+        if args.use_val_set:
+            acc_val, loss_val, oacc_val, avg_iou_val, avg_acc_val = eval(True)
+            print(VAL_COLOR + '-> Val Loss: %1.4f  Val accuracy: %3.2f%%  Val oAcc: %3.2f%%  Val IoU: %3.2f%%  best ioU: %3.2f%%' % \
+                 (loss_val, acc_val, 100*oacc_val, 100*avg_iou_val,100*max(best_iou,avg_iou_val)) + TRAIN_COLOR)
+            if avg_iou_val>best_iou: #best score yet on the validation set
+                print(BEST_COLOR + '-> New best model achieved!' + TRAIN_COLOR)
+                best_iou = avg_iou_val
+                new_best_model = True
+                torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(), 'optimizer' : optimizer.state_dict()},
+                       os.path.join(args.odir, 'model.pth.tar'))
+        elif epoch % args.save_nth_epoch == 0 or epoch==args.epochs-1:
+                torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(), 'optimizer' : optimizer.state_dict()},
+                       os.path.join(args.odir, 'model.pth.tar'))
+        #test every test_nth_epochs
+        #or test after each enw model (but skip the first 5 for efficiency)
+        if (not(args.use_val_set) and (epoch+1) % args.test_nth_epoch == 0)  \
+           or (args.use_val_set and new_best_model and epoch > 5): 
+            acc_test, loss_test, oacc_test, avg_iou_test, avg_acc_test = eval(False)
+            print(TEST_COLOR + '-> Test Loss: %1.4f  Test accuracy: %3.2f%%  Test oAcc: %3.2f%%  Test avgIoU: %3.2f%%' % \
+                 (loss_test, acc_test, 100*oacc_test, 100*avg_iou_test) + TRAIN_COLOR)
+        else:
+            acc_test, loss_test, oacc_test, avg_iou_test, avg_acc_test = 0, 0, 0, 0, 0
+
+        stats.append({'epoch': epoch, 'acc': acc, 'loss': loss, 'oacc': oacc, 'avg_iou': avg_iou, 'acc_test': acc_test, 'oacc_test': oacc_test, 'avg_iou_test': avg_iou_test, 'avg_acc_test': avg_acc_test, 'best_iou' : best_iou})
 
         if epoch % args.save_nth_epoch == 0 or epoch==args.epochs-1:
-            with open(os.path.join(args.odir, 'trainlog.txt'), 'w') as outfile:
+            with open(os.path.join(args.odir, 'trainlog.json'), 'w') as outfile:
                 json.dump(stats, outfile)
             torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(), 'optimizer' : optimizer.state_dict()},
                        os.path.join(args.odir, 'model.pth.tar'))
-
+        
         if math.isnan(loss): break
-
+    
     if len(stats)>0:
-        with open(os.path.join(args.odir, 'trainlog.txt'), 'w') as outfile:
+        with open(os.path.join(args.odir, 'trainlog.json'), 'w') as outfile:
             json.dump(stats, outfile)
 
+    if args.use_val_set :
+        args.resume = args.odir + '/model.pth.tar'
+        model, optimizer, stats = resume(args, dbinfo)
+        torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(), 'optimizer' : optimizer.state_dict()},
+                       os.path.join(args.odir, 'model.pth.tar'))
+    
     # Final evaluation
-    if args.test_multisamp_n>0:
+    if args.test_multisamp_n>0 and args.db_test_name == 'test':
         acc_test, oacc_test, avg_iou_test, per_class_iou_test, predictions_test, avg_acc_test, confusion_matrix = eval_final()
         print('-> Multisample {}: Test accuracy: {}, \tTest oAcc: {}, \tTest avgIoU: {}, \tTest mAcc: {}'.format(args.test_multisamp_n, acc_test, oacc_test, avg_iou_test, avg_acc_test))
         with h5py.File(os.path.join(args.odir, 'predictions_'+args.db_test_name+'.h5'), 'w') as hf:
             for fname, o_cpu in predictions_test.items():
                 hf.create_dataset(name=fname, data=o_cpu) #(0-based classes)
-        with open(os.path.join(args.odir, 'scores_'+args.db_test_name+'.txt'), 'w') as outfile:
+        with open(os.path.join(args.odir, 'scores_'+args.db_test_name+'.json'), 'w') as outfile:
             json.dump([{'epoch': args.start_epoch, 'acc_test': acc_test, 'oacc_test': oacc_test, 'avg_iou_test': avg_iou_test, 'per_class_iou_test': per_class_iou_test, 'avg_acc_test': avg_acc_test}], outfile)
         np.save(os.path.join(args.odir, 'pointwise_cm.npy'), confusion_matrix)
 
-
-
-
-
-  
 def resume(args, dbinfo):
     """ Loads model and optimizer state from a previous checkpoint. """
     print("=> loading checkpoint '{}'".format(args.resume))
@@ -342,7 +395,7 @@ def resume(args, dbinfo):
     for group in optimizer.param_groups: group['initial_lr'] = args.lr
     args.start_epoch = checkpoint['epoch']
     try:
-        stats = json.loads(open(os.path.join(os.path.dirname(args.resume), 'trainlog.txt')).read())
+        stats = json.loads(open(os.path.join(os.path.dirname(args.resume), 'trainlog.json')).read())
     except:
         stats = []
     return model, optimizer, stats

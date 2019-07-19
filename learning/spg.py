@@ -13,7 +13,7 @@ import os
 import math
 import transforms3d
 import torch
-import ecc
+from learning import ecc
 import h5py
 from sklearn import preprocessing
 import igraph
@@ -48,7 +48,7 @@ def spg_edge_features(edges, node_att, edge_att, args):
 
     return np.concatenate(columns, axis=1).astype(np.float32)
 
-def scaler01(trainlist, testlist, transform_train=True):
+def scaler01(trainlist, testlist, transform_train=True, validlist = []):
     """ Scale edge features to 0 mean 1 stddev """
     edge_feats = np.concatenate([ trainlist[i][3] for i in range(len(trainlist)) ], 0)
     scaler = preprocessing.StandardScaler().fit(edge_feats)
@@ -58,7 +58,10 @@ def scaler01(trainlist, testlist, transform_train=True):
             scaler.transform(trainlist[i][3], copy=False)
     for i in range(len(testlist)):
         scaler.transform(testlist[i][3], copy=False)
-    return trainlist, testlist
+    if len(validlist)>0:
+        for i in range(len(validlist)):
+            scaler.transform(validlist[i][3], copy=False)
+    return trainlist, testlist, validlist
 
 def spg_reader(args, fname, incl_dir_in_name=False):
     """ Loads a supergraph from H5 file. """
@@ -127,7 +130,6 @@ def k_big_enough(G, minpts, k):
 def loader(entry, train, args, db_path, test_seed_offset=0):
     """ Prepares a superpoint graph (potentially subsampled in training) and associated superpoints. """
     G, fname = entry
-
     # 1) subset (neighborhood) selection of (permuted) superpoint graph
     if train:
         if 0 < args.spg_augm_hardcutoff < G.vcount():
@@ -216,6 +218,7 @@ def load_superpoint(args, fname, id, train, test_seed_offset):
         if 'e' in args.pc_attribs: columns.append(P[:,6,None])
         if 'lpsv' in args.pc_attribs: columns.append(P[:,7:11])
         if 'XYZ' in args.pc_attribs: columns.append(P[:,11:14])
+        if 'd' in args.pc_attribs: columns.append(P[:,14])
         P = np.concatenate(columns, axis=1)
 
     if train:
@@ -229,7 +232,7 @@ def augment_cloud(P, args):
     if args.pc_augm_scale > 1:
         s = random.uniform(1/args.pc_augm_scale, args.pc_augm_scale)
         M = np.dot(transforms3d.zooms.zfdir2mat(s), M)
-    if args.pc_augm_rot:
+    if args.pc_augm_rot==1:
         angle = random.uniform(0, 2*math.pi)
         M = np.dot(transforms3d.axangles.axangle2mat([0,0,1], angle), M) # z=upright assumption
     if args.pc_augm_mirror_prob > 0: # mirroring x&y, not z
@@ -244,3 +247,5 @@ def augment_cloud(P, args):
         P = P + np.clip(sigma * np.random.randn(*P.shape), -1*clip, clip).astype(np.float32)
     return P
 
+def global_rotation(P, args):
+    print("e")

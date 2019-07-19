@@ -10,8 +10,8 @@ from builtins import range
 import torch
 import torch.nn as nn
 import torch.nn.init as init
-import ecc
-from modules import RNNGraphConvModule, ECC_CRFModule, GRUCellEx, LSTMCellEx
+from learning import ecc
+from learning.modules import RNNGraphConvModule, ECC_CRFModule, GRUCellEx, LSTMCellEx
 
 
 def create_fnet(widths, orthoinit, llbias, bnidx=-1):
@@ -25,11 +25,11 @@ def create_fnet(widths, orthoinit, llbias, bnidx=-1):
     fnet_modules = []
     for k in range(len(widths)-2):
         fnet_modules.append(nn.Linear(widths[k], widths[k+1]))
-        if orthoinit: init.orthogonal(fnet_modules[-1].weight, gain=init.calculate_gain('relu'))
+        if orthoinit: init.orthogonal_(fnet_modules[-1].weight, gain=init.calculate_gain('relu'))
         if bnidx==k: fnet_modules.append(nn.BatchNorm1d(widths[k+1]))
         fnet_modules.append(nn.ReLU(True))
     fnet_modules.append(nn.Linear(widths[-2], widths[-1], bias=llbias))
-    if orthoinit: init.orthogonal(fnet_modules[-1].weight)
+    if orthoinit: init.orthogonal_(fnet_modules[-1].weight)
     if bnidx==len(widths)-1: fnet_modules.append(nn.BatchNorm1d(fnet_modules[-1].weight.size(0)))
     return nn.Sequential(*fnet_modules)
 

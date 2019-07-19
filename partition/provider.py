@@ -12,14 +12,20 @@ import random
 import glob
 from plyfile import PlyData, PlyElement
 import numpy as np
-from numpy import genfromtxt
+#from numpy import genfromtxt
+import pandas as pd
 import h5py
 #import laspy
 from sklearn.neighbors import NearestNeighbors
-sys.path.append("./ply_c")
-sys.path.append("./partition/ply_c")
-import libply_c
+
+
+DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.join(DIR_PATH, '..'))
+from partition.ply_c import libply_c
 import colorsys
+import matplotlib as mp
+from matplotlib import cm
+from sklearn.decomposition import PCA
 #------------------------------------------------------------------------------
 def partition2ply(filename, xyz, components):
     """write a ply with random colors for each components"""
@@ -72,7 +78,7 @@ def error2ply(filename, xyz, rgb, labels, prediction):
         prediction = np.argmax(prediction, axis = 1)
     if len(labels.shape) > 1 and labels.shape[1] > 1:
         labels = np.argmax(labels, axis = 1)
-    color_rgb = rgb/255;
+    color_rgb = rgb/255
     for i_ver in range(0, len(labels)):
         
         color_hsv = list(colorsys.rgb_to_hsv(color_rgb[i_ver,0], color_rgb[i_ver,1], color_rgb[i_ver,2]))
@@ -80,10 +86,10 @@ def error2ply(filename, xyz, rgb, labels, prediction):
             color_hsv[0] = 0.333333
         else:
             color_hsv[0] = 0
-        color_hsv[1] = min(1, color_hsv[1] + 0.3);
-        color_hsv[2] = min(1, color_hsv[2] + 0.1);
+        color_hsv[1] = min(1, color_hsv[1] + 0.3)
+        color_hsv[2] = min(1, color_hsv[2] + 0.1)
         color_rgb[i_ver,:] = list(colorsys.hsv_to_rgb(color_hsv[0], color_hsv[1], color_hsv[2]))
-    color_rgb = np.array(color_rgb*255, dtype='u1');
+    color_rgb = np.array(color_rgb*255, dtype='u1')
     prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
     vertex_all = np.empty(len(xyz), dtype=prop)
     for i in range(0, 3):
@@ -104,6 +110,17 @@ def spg2ply(filename, spg_graph):
     edges_val[edges_prop[0][0]] = spg_graph['source'].flatten()
     edges_val[edges_prop[1][0]] = spg_graph['target'].flatten()
     ply = PlyData([PlyElement.describe(vertex_val, 'vertex'), PlyElement.describe(edges_val, 'edge')], text=True)
+    ply.write(filename)
+#------------------------------------------------------------------------------
+def scalar2ply(filename, xyz, scalar):
+    """write a ply with an unisgned integer scalar field"""
+    prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('scalar', 'f4')]
+    vertex_all = np.empty(len(xyz), dtype=prop)
+    for i in range(0, 3):
+        vertex_all[prop[i][0]] = xyz[:, i]
+    vertex_all[prop[3][0]] = scalar
+    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+    
     ply.write(filename)
 #------------------------------------------------------------------------------
 def get_color_from_label(object_label, dataset):
@@ -149,12 +166,14 @@ def get_color_from_label(object_label, dataset):
         raise ValueError('Type not recognized: %s' % (object_label))
     return object_label
 #------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 def read_s3dis_format(raw_path, label_out=True):
 #S3DIS specific
     """extract data from a room folder"""
-    room_ver = genfromtxt(raw_path, delimiter=' ')
-    xyz = np.array(room_ver[:, 0:3], dtype='float32')
-    rgb = np.array(room_ver[:, 3:6], dtype='uint8')
+    #room_ver = genfromtxt(raw_path, delimiter=' ')
+    room_ver = pd.read_csv(raw_path, sep=' ', header=None).values
+    xyz = np.ascontiguousarray(room_ver[:, 0:3], dtype='float32')
+    rgb = np.ascontiguousarray(room_ver[:, 3:6], dtype='uint8')
     if not label_out:
         return xyz, rgb
     n_ver = len(room_ver)
@@ -163,18 +182,30 @@ def read_s3dis_format(raw_path, label_out=True):
     room_labels = np.zeros((n_ver,), dtype='uint8')
     room_object_indices = np.zeros((n_ver,), dtype='uint32')
     objects = glob.glob(os.path.dirname(raw_path) + "/Annotations/*.txt")
-    i_object = 0
+    i_object = 1
     for single_object in objects:
         object_name = os.path.splitext(os.path.basename(single_object))[0]
         print("        adding object " + str(i_object) + " : "  + object_name)
         object_class = object_name.split('_')[0]
         object_label = object_name_to_label(object_class)
-        obj_ver = genfromtxt(single_object, delimiter=' ')
+        #obj_ver = genfromtxt(single_object, delimiter=' ')
+        obj_ver = pd.read_csv(single_object, sep=' ', header=None).values
         distances, obj_ind = nn.kneighbors(obj_ver[:, 0:3])
         room_labels[obj_ind] = object_label
         room_object_indices[obj_ind] = i_object
         i_object = i_object + 1
-    return xyz, rgb, room_labels
+    
+    return xyz, rgb, room_labels, room_object_indices
+#------------------------------------------------------------------------------
+def read_vkitti_format(raw_path):
+#S3DIS specific
+    """extract data from a room folder"""
+    data = np.load(raw_path)
+    xyz = data[:, 0:3]
+    rgb = data[:, 3:6]
+    labels = data[:, -1]+1
+    labels[(labels==14).nonzero()] = 0
+    return xyz, rgb, labels
 #------------------------------------------------------------------------------
 def object_name_to_label(object_class):
     """convert from object name in S3DIS to an int"""
@@ -195,6 +226,7 @@ def object_name_to_label(object_class):
         'stairs': 0,
         }.get(object_class, 0)
     return object_label
+
 #------------------------------------------------------------------------------
 def read_semantic3d_format(data_file, n_class, file_label_path, voxel_width, ver_batch):
     """read the format of semantic3d. 
@@ -204,46 +236,114 @@ def read_semantic3d_format(data_file, n_class, file_label_path, voxel_width, ver
     n_class : the number of class; if 0 won't search for labels (test set)
     implements batch-loading for huge files
     and pruning"""
-    i_rows = 0
+    
     xyz = np.zeros((0, 3), dtype='float32')
     rgb = np.zeros((0, 3), dtype='uint8')
     labels = np.zeros((0, n_class+1), dtype='uint32')
     #---the clouds can potentially be too big to parse directly---
     #---they are cut in batches in the order they are stored---
+    
+    def process_chunk(vertex_chunk, label_chunk, has_labels, xyz, rgb, labels):
+        xyz_full = np.ascontiguousarray(np.array(vertex_chunk.values[:, 0:3], dtype='float32'))
+        rgb_full = np.ascontiguousarray(np.array(vertex_chunk.values[:, 4:7], dtype='uint8'))
+        if has_labels:
+            labels_full = label_chunk.values.squeeze()
+        else:
+            labels_full = None
+        if voxel_width > 0:
+            if has_labels > 0:
+                xyz_sub, rgb_sub, labels_sub, objets_sub = libply_c.prune(xyz_full, voxel_width
+                                             , rgb_full, labels_full , np.zeros(1, dtype='uint8'), n_class, 0)
+                labels = np.vstack((labels, labels_sub))
+                del labels_full
+            else:
+                xyz_sub, rgb_sub, l, o = libply_c.prune(xyz_full, voxel_width
+                                    , rgb_full, np.zeros(1, dtype='uint8'), np.zeros(1, dtype='uint8'), 0,0)            
+            xyz = np.vstack((xyz, xyz_sub))
+            rgb = np.vstack((rgb, rgb_sub))
+        else:
+            xyz = xyz_full
+            rgb = xyz_full
+            labels = labels_full
+        return xyz, rgb, labels
+    if n_class>0:
+        for (i_chunk, (vertex_chunk, label_chunk)) in \
+            enumerate(zip(pd.read_csv(data_file,chunksize=ver_batch, delimiter=' '), \
+                pd.read_csv(file_label_path, dtype="u1",chunksize=ver_batch))):
+            print("processing lines %d to %d" % (i_chunk * ver_batch, (i_chunk+1) * ver_batch))
+            xyz, rgb, labels = process_chunk(vertex_chunk, label_chunk, 1, xyz, rgb, labels)
+    else:
+        for (i_chunk, vertex_chunk) in enumerate(pd.read_csv(data_file, delimiter=' ',chunksize=ver_batch)):
+            print("processing lines %d to %d" % (i_chunk * ver_batch, (i_chunk+1) * ver_batch))
+            xyz, rgb, dump = process_chunk(vertex_chunk, None, 0, xyz, rgb, None)
+        
+    print("Reading done")
+    if n_class>0:
+        return xyz, rgb, labels
+    else:
+        return xyz, rgb
+#------------------------------------------------------------------------------
+def read_semantic3d_format2(data_file, n_class, file_label_path, voxel_width, ver_batch):
+    """read the format of semantic3d. 
+    ver_batch : if ver_batch>0 then load the file ver_batch lines at a time.
+                useful for huge files (> 5millions lines)
+    voxel_width: if voxel_width>0, voxelize data with a regular grid
+    n_class : the number of class; if 0 won't search for labels (test set)
+    implements batch-loading for huge files
+    and pruning"""
+    
+    xyz = np.zeros((0, 3), dtype='float32')
+    rgb = np.zeros((0, 3), dtype='uint8')
+    labels = np.zeros((0, n_class+1), dtype='uint32')
+    #---the clouds can potentially be too big to parse directly---
+    #---they are cut in batches in the order they are stored---
+    i_rows = 0
     while True:
         try:
+            head = None
             if ver_batch>0:
+                print("Reading lines %d to %d" % (i_rows, i_rows + ver_batch))
                 vertices = np.genfromtxt(data_file
                          , delimiter=' ', max_rows=ver_batch
                          , skip_header=i_rows)
+                #if i_rows > 0:
+                #    head = i_rows-1
+                #vertices = pd.read_csv(data_file
+                #         , sep=' ', nrows=ver_batch
+                #         , header=head).values
+                
             else:
-                vertices = np.genfromtxt(data_file, delimiter=' ')
+                #vertices = np.genfromtxt(data_file, delimiter=' ')
+                vertices = np.pd.read_csv(data_file, sep=' ', header=None).values
                 break
                 
-        except StopIteration:
+        except (StopIteration, pd.errors.ParserError):
             #end of file
             break
         if len(vertices)==0:
             break
-        xyz_full = np.array(vertices[:, 0:3], dtype='float32')
-        rgb_full = np.array(vertices[:, 4:7], dtype='uint8')
+        xyz_full = np.ascontiguousarray(np.array(vertices[:, 0:3], dtype='float32'))
+        rgb_full = np.ascontiguousarray(np.array(vertices[:, 4:7], dtype='uint8'))
         del vertices
         if n_class > 0:
+            #labels_full = pd.read_csv(file_label_path, dtype="u1"
+            #             , nrows=ver_batch, header=head).values.squeeze()
             labels_full = np.genfromtxt(file_label_path, dtype="u1", delimiter=' '
-                        , max_rows=ver_batch, skip_header=i_rows)
+                            , max_rows=ver_batch, skip_header=i_rows)
                 
         if voxel_width > 0:
             if n_class > 0:
-                xyz_sub, rgb_sub, labels_sub = libply_c.prune(xyz_full, voxel_width
-                                             , rgb_full, labels_full, n_class)
+                xyz_sub, rgb_sub, labels_sub, objets_sub = libply_c.prune(xyz_full, voxel_width
+                                             , rgb_full, labels_full , np.zeros(1, dtype='uint8'), n_class, 0)
                 labels = np.vstack((labels, labels_sub))
             else:
-                xyz_sub, rgb_sub, l = libply_c.prune(xyz_full, voxel_width
-                                    , rgb_full, np.zeros(1, dtype='uint8'), 0)
+                xyz_sub, rgb_sub, l, o = libply_c.prune(xyz_full, voxel_width
+                                    , rgb_full, np.zeros(1, dtype='uint8'), np.zeros(1, dtype='uint8'), 0,0)            
             del xyz_full, rgb_full
             xyz = np.vstack((xyz, xyz_sub))
             rgb = np.vstack((rgb, rgb_sub))
         i_rows = i_rows + ver_batch        
+    print("Reading done")
     if n_class>0:
         return xyz, rgb, labels
     else:
@@ -303,6 +403,59 @@ def write_ply_obj(filename, xyz, rgb, labels, object_indices):
     vertex_all[prop[7][0]] = object_indices
     ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
     ply.write(filename)
+    
+#------------------------------------------------------------------------------
+def embedding2ply(filename, xyz, embeddings):
+    """write a ply with colors corresponding to geometric features"""
+    
+    if embeddings.shape[1]>3:
+        pca = PCA(n_components=3)
+        #pca.fit(np.eye(embeddings.shape[1]))
+        pca.fit(np.vstack((np.zeros((embeddings.shape[1],)),np.eye(embeddings.shape[1]))))
+        embeddings = pca.transform(embeddings)
+        
+    #value = (embeddings-embeddings.mean(axis=0))/(2*embeddings.std())+0.5
+    #value = np.minimum(np.maximum(value,0),1)
+    #value = (embeddings)/(3 * embeddings.std())+0.5
+    value = np.minimum(np.maximum((embeddings+1)/2,0),1)
+    
+    
+    color = np.array(255 * value, dtype='uint8')
+    prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
+    vertex_all = np.empty(len(xyz), dtype=prop)
+    for i in range(0, 3):
+        vertex_all[prop[i][0]] = xyz[:, i]
+    for i in range(0, 3):
+        vertex_all[prop[i+3][0]] = color[:, i]
+    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+    
+    ply.write(filename)
+
+#------------------------------------------------------------------------------
+def edge_class2ply2(filename, edg_class, xyz, edg_source, edg_target):
+    """write a ply with edge weight color coded into the midway point"""
+    
+    n_edg = len(edg_target)
+    
+    midpoint = (xyz[edg_source,]+xyz[edg_target,])/2
+    
+    color = np.zeros((edg_source.shape[0],3), dtype = 'uint8')
+    color[edg_class==0,] = [0,0,0]
+    color[(edg_class==1).nonzero(),] = [255,0,0]
+    color[(edg_class==2).nonzero(),] = [125,255,0]
+    color[(edg_class==3).nonzero(),] = [0,125,255]
+    
+    prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
+    vertex_all = np.empty(n_edg, dtype=prop)
+    for i in range(0, 3):
+        vertex_all[prop[i][0]] = np.hstack(midpoint[:, i])
+    for i in range(3, 6):
+        vertex_all[prop[i][0]] = color[:,i-3]
+    
+    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+    
+    ply.write(filename)
+    
 #------------------------------------------------------------------------------
 def write_ply_labels(filename, xyz, rgb, labels):
     """write into a ply file. include the label"""
@@ -333,10 +486,7 @@ def write_features(file_name, geof, xyz, rgb, graph_nn, labels):
     if os.path.isfile(file_name):
         os.remove(file_name)
     data_file = h5py.File(file_name, 'w')
-    data_file.create_dataset('linearity', data=geof[:, 0], dtype='float32')
-    data_file.create_dataset('planarity', data=geof[:, 1], dtype='float32')
-    data_file.create_dataset('scattering', data=geof[:, 2], dtype='float32')
-    data_file.create_dataset('verticality', data=geof[:, 3], dtype='float32')
+    data_file.create_dataset('geof', data=geof, dtype='float32')
     data_file.create_dataset('source', data=graph_nn["source"], dtype='uint32')
     data_file.create_dataset('target', data=graph_nn["target"], dtype='uint32')
     data_file.create_dataset('distances', data=graph_nn["distances"], dtype='float32')
@@ -353,30 +503,24 @@ def read_features(file_name):
     """read the geometric features, clouds and labels from a h5 file"""
     data_file = h5py.File(file_name, 'r')
     #fist get the number of vertices
-    n_ver = len(data_file["linearity"])
+    n_ver = len(data_file["geof"][:, 0])
     has_labels = len(data_file["labels"])
     #the labels can be empty in the case of a test set
     if has_labels:
         labels = np.array(data_file["labels"])
     else:
         labels = []
-    #---create the arrays---
-    geof = np.zeros((n_ver, 4), dtype='float32')
     #---fill the arrays---
-    geof[:, 0] = data_file["linearity"]
-    geof[:, 1] = data_file["planarity"]
-    geof[:, 2] = data_file["scattering"]
-    geof[:, 3] = data_file["verticality"]
+    geof = data_file["geof"][:]
     xyz = data_file["xyz"][:]
     rgb = data_file["rgb"][:]
     source = data_file["source"][:]
     target = data_file["target"][:]
-    distances = data_file["distances"][:]
+
     #---set the graph---
     graph_nn = dict([("is_nn", True)])
     graph_nn["source"] = source
     graph_nn["target"] = target
-    graph_nn["distances"] = distances
     return geof, xyz, rgb, graph_nn, labels
 #------------------------------------------------------------------------------
 def write_spg(file_name, graph_sp, components, in_component):
@@ -471,14 +615,19 @@ def interpolate_labels_batch(data_file, xyz, labels, ver_batch):
         try:
             if ver_batch>0:
                 print("read lines %d to %d" % (i_rows, i_rows + ver_batch))
-                vertices = np.genfromtxt(data_file
-                         , delimiter=' ', max_rows=ver_batch
-                         , skip_header=i_rows)
+                #vertices = np.genfromtxt(data_file
+                #         , delimiter=' ', max_rows=ver_batch
+                #        , skip_header=i_rows)
+                vertices = pd.read_csv(data_file
+                         , sep=' ', nrows=ver_batch
+                         , header=i_rows).values
             else:
-                vertices = np.genfromtxt(data_file
-                         , delimiter=' ')
+                #vertices = np.genfromtxt(data_file
+                 #        , delimiter=' ')
+                vertices = pd.read_csv(data_file
+                         , delimiter=' ').values
                 break
-        except StopIteration:
+        except (StopIteration, pd.errors.ParserError):
             #end of file
             break
         if len(vertices)==0:
@@ -498,3 +647,41 @@ def interpolate_labels(xyz_up, xyz, labels, ver_batch):
     nn = NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(xyz)
     distances, neighbor = nn.kneighbors(xyz_up)
     return labels[neighbor].flatten()
+#------------------------------------------------------------------------------
+def perfect_prediction(components, labels):
+    """assign each superpoint with the majority label"""
+    full_pred = np.zeros((labels.shape[0],),dtype='uint32')
+    for i_com in range(len(components)):
+        label_com = labels[components[i_com],1:].sum(0).argmax()
+        full_pred[components[i_com]]=label_com
+    return full_pred
+#----------------------------------------------------
+#SEAL utilities
+
+def compute_gt_connected_components(n_ver, edg_source, edg_target, is_transition, cutoff):
+    components, in_component = libcp.connected_comp(n_ver,
+                                                  edg_source.astype('uint32'),
+                                                  edg_target.astype('uint32'),
+                                                  is_transition.astype('uint8'), 40) #rough guess
+    return components, in_component
+#----------------------
+def write_gt_connected_components(file_name, components, in_component):
+    """save the label-based connected components of the ground truth"""
+    if os.path.isfile(file_name):
+        os.remove(file_name)
+    data_file = h5py.File(file_name, 'w')
+    grp = data_file.create_group('components')
+    for i_com in range(len(components)):
+        grp.create_dataset(str(i_com), data=components[i_com], dtype='uint32')
+    data_file.create_dataset('in_component', data=in_component, dtype='uint32')
+#-------------------------------------
+
+def read_gt_connected_components(file_name):
+    """read the label-based connected components of the ground truth"""
+    data_file = h5py.File(file_name, 'r')
+    in_component = np.array(data_file["in_component"], dtype='uint32')
+    n_com = np.amax(in_component)
+    components = np.empty((n_com,), dtype=object)
+    for i_com in range(0, n_com):
+        components[i_com] = np.array(grp[str(i_com)], dtype='uint32').tolist()
+    return components, in_component
