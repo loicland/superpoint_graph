@@ -14,11 +14,11 @@ python supervized_partition/graph_processing.py --ROOT_PATH $VKITTI3D_DIR --data
 
 for FOLD in 1 2 3 4 5 6; do
     python ./supervized_partition/supervized_partition.py --ROOT_PATH $VKITTI3D_DIR --dataset vkitti \
-    --epochs 30 --test_nth _epoch 10  --cvfold $FOLD --reg_strength 0.5 --spatial_emb 0.02 --batch_size 15 \
-    --global_feat exyrgb --CP_cutoff 15 --odir results_part/vkitti/best; \
+    --epochs 50 --test_nth_epoch 10  --cvfold $FOLD --reg_strength 0.5 --spatial_emb 0.02 --batch_size 15 \
+    --global_feat exyrgb --CP_cutoff 10 --odir results_part/vkitti/best; \
  done;   
- ```
- or use our trained weights and the `--resume RESUME` argument:
+```
+ or use our [trained weights](http://recherche.ign.fr/llandrieu/SPG/vkitti/results_part/pretrained.zip) and the `--resume RESUME` argument:
  
  ```
 python supervized_partition/graph_processing.py --ROOT_PATH $VKITTI3D_DIR --dataset vkitti --voxel_width 0.05 --use_voronoi 1
@@ -26,7 +26,7 @@ python supervized_partition/graph_processing.py --ROOT_PATH $VKITTI3D_DIR --data
 for FOLD in 1 2 3 4 5 6; do
     python ./supervized_partition/supervized_partition.py --ROOT_PATH $VKITTI3D_DIR --dataset vkitti \
     --epochs -1 --test_nth_epoch 10 --cvfold $FOLD --reg_strength 0.5 --spatial_emb 0.02 --batch_size 15\
-    --global_feat exyrgb --CP_cutoff 15 --odir results_partition/vkitti/pretrained --resume RESUME; \
+    --global_feat exyrgb --CP_cutoff 10 --odir results_partition/vkitti/pretrained --resume RESUME; \
  done;   
  ```
  
@@ -44,17 +44,20 @@ python learning/vkitti_dataset.py --VKITTI_PATH $VKITTI3D_DIR
 To train from scratch, run:
 ```
 for FOLD in 1 2 3 4 5 6; do \ 
-CUDA_VISIBLE_DEVICES=0 python ./learning/main.py --dataset vkitti --VKITTI_PATH $VKITTI3D_DIR --cvfold $FOLD --epochs 150 \ --lr_steps "[40, 50, 60, 70, 80, 100, 120]" --test_nth_epoch 10 --model_config gru_10_1_1_1_0,f_13 --pc_attribs xyzXYZrgb \ --ptn_nfeat_stn 9 --batch_size 4 --ptn_minpts 15 --spg_augm_order 4 --spg_augm_hardcutoff 768 \
+CUDA_VISIBLE_DEVICES=0 python ./learning/main.py --dataset vkitti --VKITTI_PATH $VKITTI3D_DIR --cvfold $FOLD --epochs 100 \ --lr_steps "[40, 50, 60, 70, 80]" --test_nth_epoch 10 --model_config gru_10_1_1_1_0,f_13 --pc_attribs xyzXYZrgb \ 
+--ptn_nfeat_stn 9 --batch_size 4 --ptn_minpts 15 --spg_augm_order 3 --spg_augm_hardcutoff 256 \
 --ptn_widths "[[64,64,128], [64,32,32]]" --ptn_widths_stn "[[32,64], [32,16]]" --loss_weights sqrt \
---use_val_set 1 --pc_augm_rot 0 --odir results/vkitti/best/cv$FOLD; \
+--use_val_set 1 --odir results/vkitti/best/cv$FOLD; \
 done;\
 ```
-or use our trained weights with the `--resume RESUME` argument:
+
+or use our [trained weights](http://recherche.ign.fr/llandrieu/SPG/vkitti/results/pretrained.zip) with the `--resume RESUME` argument:
 ```
 for FOLD in 1 2 3 4 5 6; do \ 
-CUDA_VISIBLE_DEVICES=0 python ./learning/main.py --dataset vkitti --VKITTI_PATH $VKITTI3D_DIR --cvfold $FOLD --epochs 150 \ --lr_steps "[40, 50, 60, 70, 80, 100, 120]" --test_nth_epoch 10 --model_config gru_10_1_1_1_0,f_13 --pc_attribs xyzXYZrgb \ --ptn_nfeat_stn 9 --batch_size 4 --ptn_minpts 15 --spg_augm_order 4 --spg_augm_hardcutoff 768 \
+CUDA_VISIBLE_DEVICES=0 python ./learning/main.py --dataset vkitti --VKITTI_PATH $VKITTI3D_DIR --cvfold $FOLD --epochs 100 \ --lr_steps "[40, 50, 60, 70, 80]" --test_nth_epoch 10 --model_config gru_10_1_1_1_0,f_13 --pc_attribs xyzXYZrgb \ 
+--ptn_nfeat_stn 9 --batch_size 4 --ptn_minpts 15 --spg_augm_order 3 --spg_augm_hardcutoff 256 \
 --ptn_widths "[[64,64,128], [64,32,32]]" --ptn_widths_stn "[[32,64], [32,16]]" --loss_weights sqrt \
---use_val_set 1 --pc_augm_rot 0 --odir results/vkitti/pretrained/cv$FOLD --resume RESUME; \
+--use_val_set 1 --odir results/vkitti/pretrained/cv$FOLD --resume RESUME; \
 done;\
 ```
 
