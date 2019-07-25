@@ -20,7 +20,7 @@ class GraphConvFunction(Function):
     """
 
     def __init__(self, in_channels, out_channels, idxn, idxe, degs, degs_gpu, edge_mem_limit=1e20):
-        super(Function, self).__init__()
+        super(GraphConvFunction, self).__init__()
         self._in_channels = in_channels
         self._out_channels = out_channels
         self._idxn = idxn
