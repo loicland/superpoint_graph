@@ -404,10 +404,7 @@ def embed(args):
                         os.path.join(folder_hierarchy.outputdir, model_name))
 
         if math.isnan(loss): break
-    
-    #if args.dataset == 'sema3d':
-        #model = model.cpu()
-    
+
     evaluate_final()
 
 
