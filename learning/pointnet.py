@@ -215,6 +215,5 @@ class LocalCloudEmbedder():
         for i in range(1,n_batches+1):
             emb = self.run_batch(model, clouds[i * batch_size:(i+1) * batch_size,:,:], clouds_global[i * batch_size:(i+1) * batch_size,:])
             emb_total = torch.cat((emb_total,emb.cpu()))
-            print("%d / %d %d / %d " % (i, n_batches, emb_total.shape[0], clouds.shape[0]))
         return emb_total
 
