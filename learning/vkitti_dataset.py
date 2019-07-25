@@ -44,7 +44,7 @@ def get_datasets(args, test_seed_offset=0):
 
     # Normalize edge features
     if args.spg_attribs01:
-        trainlist, testlist, validlist = spg.scaler01(trainlist, testlist, validlist=validlist)
+        trainlist, testlist, validlist, scaler = spg.scaler01(trainlist, testlist, validlist=validlist)
         
     return tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in trainlist],
                                     functools.partial(spg.loader, train=True, args=args, db_path=args.VKITTI_PATH)), \

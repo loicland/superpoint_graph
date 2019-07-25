@@ -391,7 +391,7 @@ def embed(args):
         stats.append({'epoch': epoch, 'loss': loss, 'loss_test': loss_test, 'n_clusters_test': n_clusters_test, 'ASA_test': ASA_test, 'BR_test': BR_test, 'BP_test': BP_test})
 
         with open(os.path.join(folder_hierarchy.outputdir, 'trainlog.json'), 'w') as outfile:
-            json.dump(stats, outfile, indent=0)
+            json.dump(stats, outfile, indent=4)
 
         if epoch % args.save_nth_epoch == 0 or epoch==args.epochs-1:            
             model_name = 'model.pth.tar'

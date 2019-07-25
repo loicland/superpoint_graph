@@ -23,8 +23,6 @@ DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(DIR_PATH, '..'))
 from partition.ply_c import libply_c
 import colorsys
-import matplotlib as mp
-from matplotlib import cm
 from sklearn.decomposition import PCA
 #------------------------------------------------------------------------------
 def partition2ply(filename, xyz, components):
@@ -173,7 +171,11 @@ def read_s3dis_format(raw_path, label_out=True):
     #room_ver = genfromtxt(raw_path, delimiter=' ')
     room_ver = pd.read_csv(raw_path, sep=' ', header=None).values
     xyz = np.ascontiguousarray(room_ver[:, 0:3], dtype='float32')
-    rgb = np.ascontiguousarray(room_ver[:, 3:6], dtype='uint8')
+    try:
+        rgb = np.ascontiguousarray(room_ver[:, 3:6], dtype='uint8')
+    except ValueError:
+        rgb = np.zeros((room_ver.shape[0],3), dtype='uint8')
+        print('WARN - corrupted rgb data for file %s' % raw_path)
     if not label_out:
         return xyz, rgb
     n_ver = len(room_ver)

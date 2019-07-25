@@ -13,7 +13,7 @@ import os
 import math
 import transforms3d
 import torch
-from learning import ecc
+import ecc
 import h5py
 from sklearn import preprocessing
 import igraph
@@ -61,7 +61,7 @@ def scaler01(trainlist, testlist, transform_train=True, validlist = []):
     if len(validlist)>0:
         for i in range(len(validlist)):
             scaler.transform(validlist[i][3], copy=False)
-    return trainlist, testlist, validlist
+    return trainlist, testlist, validlist, scaler
 
 def spg_reader(args, fname, incl_dir_in_name=False):
     """ Loads a supergraph from H5 file. """
@@ -246,6 +246,6 @@ def augment_cloud(P, args):
         sigma, clip= 0.01, 0.05 # https://github.com/charlesq34/pointnet/blob/master/provider.py#L74
         P = P + np.clip(sigma * np.random.randn(*P.shape), -1*clip, clip).astype(np.float32)
     return P
-
+    
 def global_rotation(P, args):
     print("e")
