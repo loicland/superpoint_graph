@@ -23,7 +23,7 @@ class GraphPoolFunction(Function):
     AGGR_MAX = 1
 
     def __init__(self, idxn, degs, degs_gpu, aggr, edge_mem_limit=1e20):
-        super(Function, self).__init__()
+        super(GraphPoolFunction, self).__init__()
         self._idxn = idxn
         self._degs = degs
         self._degs_gpu = degs_gpu

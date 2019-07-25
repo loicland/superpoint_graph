@@ -183,7 +183,7 @@ def main():
                     reg = RANSACRegressor(random_state=0).fit(xyz[low_points,:2], xyz[low_points,2])
                     elevation = xyz[:,2]-reg.predict(xyz[:,:2])
                 else:
-                    elevation = xyz[:,2] - xyz[:,2]
+                    elevation = xyz[:,2] - xyz[:,2].min()
                 
                 #compute the xy normalized position
                 ma, mi = np.max(xyz[:,:2],axis=0,keepdims=True), np.min(xyz[:,:2],axis=0,keepdims=True)
