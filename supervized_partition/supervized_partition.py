@@ -322,7 +322,10 @@ def embed(args):
                     clouds, clouds_global, nei = clouds_data
                     clouds_data = (clouds.to('cuda',non_blocking=True),clouds_global.to('cuda',non_blocking=True),nei) 
                 
-                embeddings = ptnCloudEmbedder.run_batch(model, *clouds_data, xyz)
+                if args.dataset=='sema3d':
+                    embeddings = ptnCloudEmbedder.run_batch_cpu(model, *clouds_data, xyz)
+                else:
+                    embeddings = ptnCloudEmbedder.run_batch(model, *clouds_data, xyz)
                 
                 diff = compute_dist(embeddings, edg_source, edg_target, args.dist_type)
                     
@@ -402,8 +405,8 @@ def embed(args):
 
         if math.isnan(loss): break
     
-    if args.dataset == 'sema3d':
-        model = model.cpu()
+    #if args.dataset == 'sema3d':
+        #model = model.cpu()
     
     evaluate_final()
 

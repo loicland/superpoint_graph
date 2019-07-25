@@ -7,6 +7,7 @@ from __future__ import division
 from __future__ import print_function
 from builtins import range
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as nnf
@@ -190,7 +191,7 @@ class LocalCloudEmbedder():
         Use when embedding many small point clouds with small PointNets at once"""
         #cudnn cannot handle arrays larger than 2**16 in one go, uses batch
         batch_size = 2**16-1
-        n_batches = int(clouds.shape[0]/batch_size)
+        n_batches = int((clouds.shape[0]-1)/batch_size)
         if self.nfeat_stn > 0:
             T = model.stn(clouds[:batch_size,:self.nfeat_stn,:])
             for i in range(1,n_batches+1):
@@ -203,6 +204,17 @@ class LocalCloudEmbedder():
         out = model.ptn(clouds[:batch_size,:,:], clouds_global[:batch_size,:])
         for i in range(1,n_batches+1):
             out = torch.cat((out,model.ptn(clouds[i * batch_size:(i+1) * batch_size,:,:], clouds_global[i * batch_size:(i+1) * batch_size,:])))
-            
         return nnf.normalize(out)
+
+    def run_batch_cpu(self, model, clouds, clouds_global, *excess):
+        """ Evaluates the cloud on CPU, but put the values in the CPU as soon as they are computed"""
+        #cudnn cannot handle arrays larger than 2**16 in one go, uses batch
+        batch_size = 2**16-1
+        n_batches = int(clouds.shape[0]/batch_size)
+        emb_total = self.run_batch(model, clouds[:batch_size,:,:], clouds_global[:batch_size,:]).cpu()
+        for i in range(1,n_batches+1):
+            emb = self.run_batch(model, clouds[i * batch_size:(i+1) * batch_size,:,:], clouds_global[i * batch_size:(i+1) * batch_size,:])
+            emb_total = torch.cat((emb_total,emb.cpu()))
+            print("%d / %d %d / %d " % (i, n_batches, emb_total.shape[0], clouds.shape[0]))
+        return emb_total
 
