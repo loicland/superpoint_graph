@@ -156,7 +156,7 @@ def main():
         optimizer = create_optimizer(args, model)
         stats = []
 
-    train_dataset, test_dataset, valid_dataset = create_dataset(args)
+    train_dataset, test_dataset, valid_dataset, scaler = create_dataset(args)
 
     print('Train dataset: %i elements - Test dataset: %i elements - Validation dataset: %i elements' % (len(train_dataset),len(test_dataset),len(valid_dataset)))
     ptnCloudEmbedder = pointnet.CloudEmbedder(args)
@@ -349,15 +349,15 @@ def main():
 
         if epoch % args.save_nth_epoch == 0 or epoch==args.epochs-1:
             with open(os.path.join(args.odir, 'trainlog.json'), 'w') as outfile:
-                json.dump(stats, outfile)
-            torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(), 'optimizer' : optimizer.state_dict()},
+                json.dump(stats, outfile,indent=4)
+            torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(), 'optimizer' : optimizer.state_dict(), 'scaler': scaler},
                        os.path.join(args.odir, 'model.pth.tar'))
         
         if math.isnan(loss): break
     
     if len(stats)>0:
         with open(os.path.join(args.odir, 'trainlog.json'), 'w') as outfile:
-            json.dump(stats, outfile)
+            json.dump(stats, outfile, indent=4)
 
     if args.use_val_set :
         args.resume = args.odir + '/model.pth.tar'

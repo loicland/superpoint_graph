@@ -12,7 +12,7 @@ import random
 import numpy as np
 import torch
 
-from learning import ecc
+import ecc
 
 def graph_info_collate_classification(batch, edge_func):
     """ Collates a list of dataset samples into a single batch. We assume that all samples have the same number of resolutions.

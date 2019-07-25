@@ -44,9 +44,9 @@ if args.dataset == 'sema3d':
 if args.dataset == 'custom_dataset':
     n_labels = 10    
 #---load the values------------------------------------------------------------
-try:#if args.supervized_partition:
+if args.supervized_partition:
     fea_file   = root + "features_supervision/"          + folder + file_name + '.h5'
-except KeyError:
+else:
     fea_file   = root + "features/"          + folder + file_name + '.h5'
 spg_file   = root + "superpoint_graphs/" + folder + file_name + '.h5'
 ply_folder = root + "clouds/"            + folder 
@@ -118,3 +118,4 @@ if res_out and bool(args.upsample):
     pred_up = interpolate_labels(xyz_up, xyz, pred_full, args.ver_batch)
     print("writing the upsampled prediction file...")
     prediction2ply(ply_file + "_pred_up.ply", xyz_up, pred_up+1, n_labels, args.dataset)
+    

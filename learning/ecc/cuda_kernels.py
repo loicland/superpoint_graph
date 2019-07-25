@@ -9,8 +9,11 @@ from __future__ import print_function
 from builtins import range
 
 import torch
-import cupy.cuda
-from pynvrtc.compiler import Program
+try:
+    import cupy.cuda
+    from pynvrtc.compiler import Program
+except:
+    pass
 from collections import namedtuple
 import numpy as np
 
@@ -32,7 +35,7 @@ def get_kernel_func(kname, ksrc, dtype):
         ksrc = ksrc.replace('DTYPE', dtype)
         #prog = Program(ksrc.encode('utf-8'), (kname+dtype+'.cu').encode('utf-8'))
         #uncomment the line above and comment the line below if it causes the following error: AttributeError: 'Program' object has no attribute '_program'
-        prog = Program(ksrc, kname+dtype+'.cu')
+        prog = Program(ksrc, kname+dtype+'.cu')        
         ptx = prog.compile()
         log = prog._interface.nvrtcGetProgramLog(prog._program)
         if len(log.strip()) > 0: print(log)
