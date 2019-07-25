@@ -112,7 +112,7 @@ def preprocess_pointclouds(SEMA3D_PATH):
                 f = h5py.File(pathD + file, 'r')
                 xyz = f['xyz'][:]
                 rgb = f['rgb'][:].astype(np.float)
-                elpsv = np.stack([ f['xyz'][:,2][:], f['linearity'][:], f['planarity'][:], f['scattering'][:], f['verticality'][:] ], axis=1)
+                elpsv = np.stack([f['xyz'][:,2][:], f['geof'][:]], axis=1)
 
                 # rescale to [-0.5,0.5]; keep xyz
                 elpsv[:,0] /= 100 # (rough guess)
@@ -125,6 +125,7 @@ def preprocess_pointclouds(SEMA3D_PATH):
                 numc = len(f['components'].keys())
 
                 with h5py.File(pathP + file, 'w') as hf:
+                    hf.create_dataset(name='centroid',data=xyz.mean(0))
                     for c in range(numc):
                         idx = f['components/{:d}'.format(c)][:].flatten()
                         if idx.size > 10000: # trim extra large segments, just for speed-up of loading time
