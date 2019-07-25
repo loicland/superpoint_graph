@@ -45,7 +45,8 @@ def get_datasets(args, test_seed_offset=0):
     return tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in trainlist],
                                     functools.partial(spg.loader, train=True, args=args, db_path=args.CUSTOM_SET_PATH)), \
            tnt.dataset.ListDataset([spg.spg_to_igraph(*tlist) for tlist in testlist],
-                                    functools.partial(spg.loader, train=False, args=args, db_path=args.CUSTOM_SET_PATH, test_seed_offset=test_seed_offset))
+                                    functools.partial(spg.loader, train=False, args=args, db_path=args.CUSTOM_SET_PATH, test_seed_offset=test_seed_offset)) ,\
+            scaler
 
 def get_info(args):
     edge_feats = 0

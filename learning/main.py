@@ -156,7 +156,7 @@ def main():
         optimizer = create_optimizer(args, model)
         stats = []
 
-    train_dataset, test_dataset, valid_dataset = create_dataset(args)
+    train_dataset, test_dataset, valid_dataset, scaler = create_dataset(args)
 
     print('Train dataset: %i elements - Test dataset: %i elements - Validation dataset: %i elements' % (len(train_dataset),len(test_dataset),len(valid_dataset)))
     ptnCloudEmbedder = pointnet.CloudEmbedder(args)
