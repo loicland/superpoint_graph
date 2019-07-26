@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -Wall -std=c++11 -fopenmp -O3  -shared -Wl,-soname,libply_c.so -o libply_c.so CMakeFiles/ply_c.dir/ply_c.cpp.o  -L/home/km/anaconda3/envs/newenv/lib -Wl,-rpath,/home/km/anaconda3/envs/newenv/lib /home/km/anaconda3/envs/newenv/lib/libboost_python.so /home/km/anaconda3/envs/newenv/lib/libboost_numpy.so /home/km/anaconda3/envs/newenv/lib/libpython3.6m.so 
