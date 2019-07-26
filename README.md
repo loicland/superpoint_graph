@@ -70,15 +70,17 @@ cd build
 cmake .. -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.6m.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.6m -DBOOST_INCLUDEDIR=$CONDAENV/include -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
 make
 ```
-The code was tested on Ubuntu 14.04 with Python 3.6 and PyTorch 0.2 to 1.0.
+The code was tested on Ubuntu 14 and 16 with Python 3.5 to 3.8 and PyTorch 0.2 to 1.1.
 
 ### Troubleshooting
 
-Common sources of error and how to fix them:
-- $CONDA_ENV is not well defined : define it or replace $CONDA_ENV by the absolute path of your environment (find it with ```locate anaconda```)
+Common sources of errors and how to fix them:
+- $CONDAENV is not well defined : define it or replace $CONDAENV by the absolute path of your conda environment (find it with ```locate anaconda```)
 - anaconda uses a different version of python than 3.6m : adapt it in the command. Find which version of python conda is using with ```locate anaconda3/lib/libpython```
 - you are using boost 1.62 or older: update it
 - cut pursuit did not download: manually clone it in the ```partition``` folder or add it as a submodule as proposed in the requirements, point 4.
+- error in make: `'numpy/ndarrayobject.h' file not found`: set symbolic link to python site-package with `sudo ln -s $CONDAENV/lib/python3.7/site-packages/numpy/core/include/numpy $CONDAENV/include/numpy`
+
 
 ## Running the code
 

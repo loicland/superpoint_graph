@@ -209,7 +209,7 @@ class LocalCloudEmbedder():
     def run_batch_cpu(self, model, clouds, clouds_global, *excess):
         """ Evaluates the cloud on CPU, but put the values in the CPU as soon as they are computed"""
         #cudnn cannot handle arrays larger than 2**16 in one go, uses batch
-        batch_size = 2**16-1
+        batch_size = 2**10-1
         n_batches = int(clouds.shape[0]/batch_size)
         emb_total = self.run_batch(model, clouds[:batch_size,:,:], clouds_global[:batch_size,:]).cpu()
         for i in range(1,n_batches+1):

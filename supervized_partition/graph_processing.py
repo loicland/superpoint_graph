@@ -329,10 +329,11 @@ def create_sema3d_datasets(args, test_seed_offset=0):
         testlist += [path + 'train/' + f + '.h5' for f in train_names]
     if 'val' in args.db_test_name:
         testlist += [path + 'train/' + f + '.h5' for f in valid_names]
-    elif 'testred' in args.db_test_name:
+    if 'testred' in args.db_test_name:
         testlist += [f for f in glob.glob(path + 'test_reduced/*.h5')]
-    elif 'testfull' in args.db_test_name:
+    if 'testfull' in args.db_test_name:
         testlist += [f for f in glob.glob(path + 'test_full/*.h5')]
+    
     
     return tnt.dataset.ListDataset(trainlist,
                                    functools.partial(graph_loader, train=True, args=args, db_path=args.ROOT_PATH)), \

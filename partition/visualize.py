@@ -44,10 +44,9 @@ if args.dataset == 'sema3d':
 if args.dataset == 'custom_dataset':
     n_labels = 10    
 #---load the values------------------------------------------------------------
-if args.supervized_partition:
+fea_file   = root + "features/"          + folder + file_name + '.h5'
+if not os.path.isfile(fea_file):
     fea_file   = root + "features_supervision/"          + folder + file_name + '.h5'
-else:
-    fea_file   = root + "features/"          + folder + file_name + '.h5'
 spg_file   = root + "superpoint_graphs/" + folder + file_name + '.h5'
 ply_folder = root + "clouds/"            + folder 
 ply_file   = ply_folder                  + file_name
