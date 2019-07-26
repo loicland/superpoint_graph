@@ -275,6 +275,9 @@ def read_ply(filename):
         except ValueError:
             return xyz, rgb
 #------------------------------------------------------------------------------
+def read_custom_format(filename):
+    return np.load(filename, None, True, True)
+#------------------------------------------------------------------------------
 def read_las(filename):
     """convert from a las file with no rgb"""
     #---read the ply file--------

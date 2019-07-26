@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="1e4cfeff-7db5-4ab4-a017-517878f576c3" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/partition/partition.py" beforeDir="false" afterPath="$PROJECT_DIR$/partition/partition.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/partition/provider.py" beforeDir="false" afterPath="$PROJECT_DIR$/partition/provider.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -12,7 +12,7 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/partition/partition.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="724">
@@ -21,11 +21,11 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/partition/provider.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-5130">
-              <caret line="27" column="43" lean-forward="true" selection-start-line="27" selection-start-column="43" selection-end-line="27" selection-end-column="43" />
+            <state relative-caret-position="589">
+              <caret line="278" column="46" selection-start-line="278" selection-start-column="45" selection-end-line="278" selection-end-column="46" />
             </state>
           </provider>
         </entry>
@@ -39,6 +39,7 @@
     <option name="CHANGED_PATHS">
       <list>
         <option value="$PROJECT_DIR$/partition/partition.py" />
+        <option value="$PROJECT_DIR$/partition/provider.py" />
       </list>
     </option>
   </component>
@@ -141,17 +142,17 @@
     </layout>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/partition/provider.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-5130">
-          <caret line="27" column="43" lean-forward="true" selection-start-line="27" selection-start-column="43" selection-end-line="27" selection-end-column="43" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/partition/partition.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="724">
           <caret line="136" column="62" lean-forward="true" selection-start-line="136" selection-start-column="62" selection-end-line="136" selection-end-column="62" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/partition/provider.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="589">
+          <caret line="278" column="46" selection-start-line="278" selection-start-column="45" selection-end-line="278" selection-end-column="46" />
         </state>
       </provider>
     </entry>
