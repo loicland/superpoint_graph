@@ -41,7 +41,7 @@ elif args.dataset == 'sema3d':
     n_labels = 8
 elif args.dataset == 'custom_dataset':
     folders = ["train/", "test/"]
-    n_labels = 10 #number of classes
+    n_labels = 2 #number of classes
 else:
     raise ValueError('%s is an unknown data set' % dataset)
 
@@ -78,9 +78,7 @@ for folder in folders:
         files = glob.glob(data_folder+"*.txt")
     elif args.dataset=='custom_dataset':
         #list all ply files in the folder
-        files = glob.glob(data_folder+"*.ply")
-        #list all las files in the folder
-        files = glob.glob(data_folder+"*.las")
+        files = glob.glob(data_folder+"*.txt")
         
     if (len(files) == 0):
         raise ValueError('%s is empty' % data_folder)
@@ -104,19 +102,24 @@ for folder in folders:
             spg_file   = spg_folder  + file_name_short + '.h5'
         elif args.dataset=='custom_dataset':
             #adapt to your hierarchy. The following 4 files must be defined
-            data_file   = data_folder      + file_name + '.ply' #or .las
+            data_file   = data_folder      + file_name + '.txt' #or .las
             cloud_file  = cloud_folder     + file_name
             fea_file    = fea_folder       + file_name + '.h5'
             spg_file    = spg_folder       + file_name + '.h5'
         
         i_file = i_file + 1
         print(str(i_file) + " / " + str(n_files) + "---> "+file_name)
+
+
+
         #--- build the geometric feature file h5 file ---
         if os.path.isfile(fea_file) and not args.overwrite:
             print("    reading the existing feature file...")
             geof, xyz, rgb, graph_nn, labels = read_features(fea_file)
         else :
             print("    creating the feature file...")
+
+
             #--- read the data files and compute the labels---
             if args.dataset=='s3dis':
                 xyz, rgb, labels = read_s3dis_format(data_file)
