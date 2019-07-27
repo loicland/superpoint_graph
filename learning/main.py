@@ -122,6 +122,9 @@ def main():
         # needed in pytorch 0.2 for super-large graphs with batchnorm in fnet  (https://github.com/pytorch/pytorch/pull/2919)
         torch.backends.cudnn.enabled = False
 
+
+
+
     # Decide on the dataset
     if args.dataset=='sema3d':
         import sema3d_dataset
@@ -137,6 +140,10 @@ def main():
         create_dataset = custom_dataset.get_datasets
     else:
         raise NotImplementedError('Unknown dataset ' + args.dataset)
+
+
+
+
 
     # Create model and optimizer
     if args.resume != '':

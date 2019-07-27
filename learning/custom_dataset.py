@@ -59,7 +59,7 @@ def get_info(args):
     return {
         'node_feats': 11 if args.pc_attribs=='' else len(args.pc_attribs),
         'edge_feats': edge_feats,
-        'classes': 10, #CHANGE TO YOUR NUMBER OF CLASS
+        'classes': 2, #CHANGE TO YOUR NUMBER OF CLASS
         'inv_class_map': {0:'class_A', 1:'class_B'}, #etc...
     }
 

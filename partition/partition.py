@@ -3,6 +3,9 @@
     http://arxiv.org/abs/1711.09869
     2017 Loic Landrieu, Martin Simonovsky
     Script for partioning into simples shapes
+
+    @mirceta -> call with
+    python partition/partition.py --dataset custom_dataset --ROOT_PATH /media/km/<GUID>/workspace --voxel_width 0.5 --reg_strength 0.8 --ver_batch 500
 """
 import os.path
 import sys
