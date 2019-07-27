@@ -2,6 +2,14 @@
     Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs
     http://arxiv.org/abs/1711.09869
     2017 Loic Landrieu, Martin Simonovsky
+
+    @mirceta -> call with
+    CUSTOM_DATASET_DIR=/media/km/ad02048a-21c3-4454-b1b4-58c5a99df3c5/workspace/
+    CUDA_VISIBLE_DEVICES=0 python learning/main.py --dataset custom_dataset --CUSTOM_SET_PATH $CUSTOM_DATASET_DIR --epochs 2 \
+    --lr_steps '[275,320]' --test_nth_epoch 2 --model_config 'gru_10,f_2' --pnth_nfeat_stn 14 --nworkers 2 \
+    --pc_attribs xyzelpsvXZY --odir "results/"
+
+    - What should be contained in custom_dataset?
 """
 from __future__ import division
 from __future__ import print_function
