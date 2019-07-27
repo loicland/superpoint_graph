@@ -78,7 +78,7 @@ for folder in folders:
         files = glob.glob(data_folder+"*.txt")
     elif args.dataset=='custom_dataset':
         #list all ply files in the folder
-        files = glob.glob(data_folder+"*.txt")
+        files = glob.glob(data_folder+"*.npy")
         
     if (len(files) == 0):
         raise ValueError('%s is empty' % data_folder)
@@ -102,7 +102,7 @@ for folder in folders:
             spg_file   = spg_folder  + file_name_short + '.h5'
         elif args.dataset=='custom_dataset':
             #adapt to your hierarchy. The following 4 files must be defined
-            data_file   = data_folder      + file_name + '.txt' #or .las
+            data_file   = data_folder      + file_name + '.npy' #or .las
             cloud_file  = cloud_folder     + file_name
             fea_file    = fea_folder       + file_name + '.h5'
             spg_file    = spg_folder       + file_name + '.h5'
@@ -136,18 +136,33 @@ for folder in folders:
             elif args.dataset=='custom_dataset':
                 #implement in provider.py your own read_custom_format outputing xyz, rgb, labels
                 #example for ply files
-                xyz, rgb, labels = read_ply(data_file)
+                xyz, rgb, labels = read_custom_format(data_file)
                 #another one for las files without rgb
-                xyz = read_las(data_file)
+                #xyz = read_las(data_file)
+
+
                 if args.voxel_width > 0:
-                    #an example of pruning without labels
-                    xyz, rgb, labels = libply_c.prune(xyz, args.voxel_width, rgb, np.array(1,dtype='u1'), 0)
-                    #another one without rgb information nor labels
-                    xyz = libply_c.prune(xyz, args.voxel_width, np.zeros(xyz.shape,dtype='u1'), np.array(1,dtype='u1'), 0)[0]
+                    pass
+
+                    # added by mirceta
+                    xyz, rgb, labels = libply_c.prune(xyz, args.voxel_width, rgb, labels, n_labels)
+                #    #an example of pruning without labels
+                #    xyz, rgb, labels = libply_c.prune(xyz, args.voxel_width, rgb, np.array(1,dtype='u1'), 0)
+                #    #another one without rgb information nor labels
+                #    xyz = libply_c.prune(xyz, args.voxel_width, np.zeros(xyz.shape,dtype='u1'), np.array(1,dtype='u1'), 0)[0]
+
+
+                rgb = []
                 #if no labels available simply set here labels = []
                 #if no rgb available simply set here rgb = [] and make sure to not use it later on
             start = timer()
             #---compute 10 nn graph-------
+            print(xyz.shape)
+            print(xyz[:5,:])
+            print('some some')
+            print(args.voxel_width)
+            print(args.k_nn_adj)
+            print(args.k_nn_geof)
             graph_nn, target_fea = compute_graph_nn_2(xyz, args.k_nn_adj, args.k_nn_geof)
             #---compute geometric features-------
             geof = libply_c.compute_geof(xyz, target_fea, args.k_nn_geof).astype('float32')

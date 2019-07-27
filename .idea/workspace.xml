@@ -2,6 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="1e4cfeff-7db5-4ab4-a017-517878f576c3" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/partition/partition.py" beforeDir="false" afterPath="$PROJECT_DIR$/partition/partition.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/partition/provider.py" beforeDir="false" afterPath="$PROJECT_DIR$/partition/provider.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -15,22 +17,36 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/partition/partition.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="724">
-              <caret line="136" column="62" lean-forward="true" selection-start-line="136" selection-start-column="62" selection-end-line="136" selection-end-column="62" />
+            <state relative-caret-position="-65">
+              <caret line="156" column="75" selection-start-line="156" selection-start-column="75" selection-end-line="156" selection-end-column="75" />
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/learning/custom_dataset.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="412">
+              <caret line="97" lean-forward="true" selection-start-line="97" selection-end-line="97" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/partition/provider.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="589">
-              <caret line="278" column="46" selection-start-line="278" selection-start-column="45" selection-end-line="278" selection-end-column="46" />
+            <state relative-caret-position="304">
+              <caret line="283" selection-start-line="283" selection-end-line="283" />
             </state>
           </provider>
         </entry>
       </file>
     </leaf>
+  </component>
+  <component name="FindInProjectRecents">
+    <findStrings>
+      <find>read_las</find>
+    </findStrings>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -38,8 +54,8 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/partition/partition.py" />
         <option value="$PROJECT_DIR$/partition/provider.py" />
+        <option value="$PROJECT_DIR$/partition/partition.py" />
       </list>
     </option>
   </component>
@@ -53,11 +69,11 @@
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="106" />
-    <option name="y" value="43" />
-    <option name="width" value="1400" />
-    <option name="height" value="960" />
+  <component name="ProjectFrameBounds">
+    <option name="x" value="-51" />
+    <option name="y" value="31" />
+    <option name="width" value="1396" />
+    <option name="height" value="962" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
@@ -119,10 +135,10 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-3" y="31" width="1326" height="1485" extended-state="6" />
+    <frame x="-51" y="31" width="1396" height="962" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.18013857" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.17092769" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -142,17 +158,24 @@
     </layout>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/partition/partition.py">
+    <entry file="file://$PROJECT_DIR$/partition/provider.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="724">
-          <caret line="136" column="62" lean-forward="true" selection-start-line="136" selection-start-column="62" selection-end-line="136" selection-end-column="62" />
+        <state relative-caret-position="304">
+          <caret line="283" selection-start-line="283" selection-end-line="283" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/partition/provider.py">
+    <entry file="file://$PROJECT_DIR$/partition/partition.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="589">
-          <caret line="278" column="46" selection-start-line="278" selection-start-column="45" selection-end-line="278" selection-end-column="46" />
+        <state relative-caret-position="-65">
+          <caret line="156" column="75" selection-start-line="156" selection-start-column="75" selection-end-line="156" selection-end-column="75" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/learning/custom_dataset.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="412">
+          <caret line="97" lean-forward="true" selection-start-line="97" selection-end-line="97" />
         </state>
       </provider>
     </entry>

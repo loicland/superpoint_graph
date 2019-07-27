@@ -276,7 +276,13 @@ def read_ply(filename):
             return xyz, rgb
 #------------------------------------------------------------------------------
 def read_custom_format(filename):
-    return np.load(filename, None, True, True)
+    X = np.load(filename, None, True, True)
+
+    xyz = np.array(X[:, 0:3], dtype='float32')
+    rgb = np.array(np.zeros((X.shape[0], 3)), dtype='uint8')
+    labels = np.zeros((X.shape[0],), dtype='uint8')
+
+    return xyz, rgb, labels
 #------------------------------------------------------------------------------
 def read_las(filename):
     """convert from a las file with no rgb"""
