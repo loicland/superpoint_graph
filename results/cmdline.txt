@@ -1,1 +1,1 @@
-'learning/main.py' --dataset 'custom_dataset' --CUSTOM_SET_PATH '/media/km/ad02048a-21c3-4454-b1b4-58c5a99df3c5/workspace' --epochs '2' --lr_steps '[275,320]' --test_nth_epoch '2' --model_config 'gru_10,f_2' --ptn_nfeat_stn '14' --nworkers '2' --pc_attribs 'xyzelpsvXYZ' --odir 'results'
+'learning/main.py' --dataset 'custom_dataset' --CUSTOM_SET_PATH '/media/km/ad02048a-21c3-4454-b1b4-58c5a99df3c5/workspace' --epochs '2' --lr_steps '[275,320]' --test_nth_epoch '2' --model_config 'gru_10,f_2' --ptn_nfeat_stn '11' --nworkers '2' --pc_attribs 'xyzelpsvXYZ' --odir 'results'

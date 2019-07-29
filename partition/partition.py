@@ -162,7 +162,6 @@ for folder in folders:
             #---compute 10 nn graph-------
             print(xyz.shape)
             print(xyz[:5,:])
-            print('some some')
             print(args.voxel_width)
             print(args.k_nn_adj)
             print(args.k_nn_geof)

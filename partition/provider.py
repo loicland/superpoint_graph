@@ -280,7 +280,7 @@ def read_custom_format(filename):
 
     xyz = np.array(X[:, 0:3], dtype='float32')
     rgb = np.array(np.zeros((X.shape[0], 3)), dtype='uint8')
-    labels = np.zeros((X.shape[0],), dtype='uint8')
+    labels = np.array(X[:, 3], dtype='uint8')
 
     return xyz, rgb, labels
 #------------------------------------------------------------------------------
