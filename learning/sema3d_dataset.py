@@ -27,13 +27,15 @@ def get_datasets(args, test_seed_offset=0):
     elif args.db_train_name == 'trainval':
         trainset = ['train/' + f for f in train_names + valid_names]
 
+    validset = []
+    testset = []
     if args.use_val_set:
         validset = ['train/' + f for f in valid_names]
-    elif args.db_test_name == 'testred':
+    if args.db_test_name == 'testred':
         testset = ['test_reduced/' + os.path.splitext(f)[0] for f in os.listdir(args.SEMA3D_PATH + '/superpoint_graphs/test_reduced')]
     elif args.db_test_name == 'testfull':
         testset = ['test_full/' + os.path.splitext(f)[0] for f in os.listdir(args.SEMA3D_PATH + '/superpoint_graphs/test_full')]
-
+        
     # Load superpoints graphs
     testlist, trainlist, validlist = [], [],  []
     for n in trainset:
@@ -55,21 +57,6 @@ def get_datasets(args, test_seed_offset=0):
                                     functools.partial(spg.loader, train=False, args=args, db_path=args.SEMA3D_PATH, test_seed_offset=test_seed_offset)),\
             scaler
 
-def get_info(args):
-    edge_feats = 0
-    for attrib in args.edge_attribs.split(','):
-        a = attrib.split('/')[0]
-        if a in ['delta_avg', 'delta_std', 'xyz']:
-            edge_feats += 3
-        else:
-            edge_feats += 1
-
-    return {
-        'node_feats': 11 if args.pc_attribs=='' else len(args.pc_attribs),
-        'edge_feats': edge_feats,
-        'classes': 8,
-        'inv_class_map': {0:'terrain_man', 1:'terrain_nature', 2:'veget_hi', 3:'veget_low', 4:'building', 5:'scape', 6:'artefact', 7:'cars'},
-    }
     
 def get_info(args):
     edge_feats = 0
@@ -80,10 +67,9 @@ def get_info(args):
         else:
             edge_feats += 1
     if args.loss_weights == 'none':
-        weights = np.ones((13,),dtype='f4')
+        weights = np.ones((8,),dtype='f4')
     else:
-        weights = h5py.File(args.S3DIS_PATH + "/parsed/class_count.h5")["class_count"][:].astype('f4')
-        weights = weights[:,[i for i in range(6) if i != args.cvfold-1]].sum(1)
+        weights = h5py.File(args.SEMA3D_PATH + "/parsed/class_count.h5")["class_count"][:].astype('f4')
         weights = weights.mean()/weights
     if args.loss_weights == 'sqrt':
         weights = np.sqrt(weights)
@@ -98,10 +84,10 @@ def get_info(args):
 
 def preprocess_pointclouds(SEMA3D_PATH):
     """ Preprocesses data by splitting them by components and normalizing."""
-
+    class_count = np.zeros((8,),dtype='int')
     for n in ['train', 'test_reduced', 'test_full']:
         pathP = '{}/parsed/{}/'.format(SEMA3D_PATH, n)
-        pathD = '{}/features/{}/'.format(SEMA3D_PATH, n)
+        pathD = '{}/features_supervision/{}/'.format(SEMA3D_PATH, n)
         pathC = '{}/superpoint_graphs/{}/'.format(SEMA3D_PATH, n)
         if not os.path.exists(pathP):
             os.makedirs(pathP)
@@ -111,15 +97,22 @@ def preprocess_pointclouds(SEMA3D_PATH):
             print(file)
             if file.endswith(".h5"):
                 f = h5py.File(pathD + file, 'r')
+
+                if n == 'train':
+                    labels = f['labels'][:]
+                    hard_labels = np.argmax(labels[:,1:],1)
+                    label_count = np.bincount(hard_labels, minlength=8)
+                    class_count = class_count + label_count
+                
                 xyz = f['xyz'][:]
                 rgb = f['rgb'][:].astype(np.float)
-                elpsv = np.stack([f['xyz'][:,2][:], f['geof'][:]], axis=1)
+                elpsv = np.concatenate((f['xyz'][:,2][:,None], f['geof'][:]), axis=1)
 
                 # rescale to [-0.5,0.5]; keep xyz
                 elpsv[:,0] /= 100 # (rough guess)
                 elpsv[:,1:] -= 0.5
                 rgb = rgb/255.0 - 0.5
-
+                
                 P = np.concatenate([xyz, rgb, elpsv], axis=1)
 
                 f = h5py.File(pathC + file, 'r')
@@ -134,7 +127,9 @@ def preprocess_pointclouds(SEMA3D_PATH):
                             idx = idx[ii]
 
                         hf.create_dataset(name='{:d}'.format(c), data=P[idx,...])
-
+    path = '{}/parsed/'.format(SEMA3D_PATH)
+    data_file = h5py.File(path+'class_count.h5', 'w')
+    data_file.create_dataset('class_count', data=class_count, dtype='int')
 
 if __name__ == "__main__":
     import argparse

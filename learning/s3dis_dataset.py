@@ -93,6 +93,7 @@ def get_info(args):
 def preprocess_pointclouds(args):
     """ Preprocesses data by splitting them by components and normalizing."""
     S3DIS_PATH = args.S3DIS_PATH
+    class_count = np.zeros((13,6),dtype='int')
     for n in range(1,7):
         pathP = '{}/parsed/Area_{:d}/'.format(S3DIS_PATH, n)
         if args.supervized_partition:
@@ -103,13 +104,19 @@ def preprocess_pointclouds(args):
         if not os.path.exists(pathP):
             os.makedirs(pathP)
         random.seed(n)
-
+        
         for file in os.listdir(pathC):
             print(file)
             if file.endswith(".h5"):
                 f = h5py.File(pathD + file, 'r')
                 xyz = f['xyz'][:]
                 rgb = f['rgb'][:].astype(np.float)
+
+                labels = f['labels'][:]
+                hard_labels = np.argmax(labels[:,1:],1)
+                label_count = np.bincount(hard_labels, minlength=13)
+                class_count[:,n-1] = class_count[:,n-1] + label_count
+                
                 if not args.supervized_partition:
                     lpsv = f['geof'][:]
                     lpsv -= 0.5 #normalize
@@ -148,8 +155,11 @@ def preprocess_pointclouds(args):
                         if idx.size > 10000: # trim extra large segments, just for speed-up of loading time
                             ii = random.sample(range(idx.size), k=10000)
                             idx = idx[ii]
-
                         hf.create_dataset(name='{:d}'.format(c), data=P[idx,...])
+
+    path = '{}/parsed/'.format(S3DIS_PATH)
+    data_file = h5py.File(path+'class_count.h5', 'w')
+    data_file.create_dataset('class_count', data=class_count, dtype='int')
 
 if __name__ == "__main__":
     import argparse
