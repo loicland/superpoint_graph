@@ -115,15 +115,17 @@ class GRUCellEx(nn.GRUCell):
             except: #pytorch <=0.2
                 return state()(gi, gh, hidden) if self.bias_ih is None else state()(gi, gh, hidden, self.bias_ih, self.bias_hh)
 
-        gi = nnf.linear(input, self.weight_ih, self.bias_ih)
-        gh = nnf.linear(hidden, self.weight_hh, self.bias_hh)
+        gi = nnf.linear(input, self.weight_ih)
+        gh = nnf.linear(hidden, self.weight_hh)
         gi, gh = self._normalize(gi, gh)
         i_r, i_i, i_n = gi.chunk(3, 1)
         h_r, h_i, h_n = gh.chunk(3, 1)
+        bih_r, bih_i, bih_n = self.bias_ih.chunk(3)
+        bhh_r, bhh_i, bhh_n = self.bias_hh.chunk(3)
 
-        resetgate = torch.sigmoid(i_r + h_r)
-        inputgate = torch.sigmoid(i_i + h_i)
-        newgate = torch.tanh(i_n + resetgate * h_n)
+        resetgate = torch.sigmoid(i_r + bih_r + h_r + bhh_r)
+        inputgate = torch.sigmoid(i_i + bih_i + h_i + bhh_i)
+        newgate = torch.tanh(i_n + bih_n + resetgate * (h_n + bhh_n))
         hy = newgate + inputgate * (hidden - newgate)
         return hy
 
