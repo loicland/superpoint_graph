@@ -213,12 +213,26 @@ def load_superpoint(args, fname, id, train, test_seed_offset):
 
     if args.pc_attribs != '':
         columns = []
-        if 'xyz' in args.pc_attribs: columns.append(P[:,:3])
-        if 'rgb' in args.pc_attribs: columns.append(P[:,3:6])
-        if 'e' in args.pc_attribs: columns.append(P[:,6,None])
-        if 'lpsv' in args.pc_attribs: columns.append(P[:,7:11])
-        if 'XYZ' in args.pc_attribs: columns.append(P[:,11:14])
-        if 'd' in args.pc_attribs: columns.append(P[:,14])
+
+        index=0
+        if 'xyz' in args.pc_attribs: 
+            columns.append(P[:,index:index+3])
+            index=index+3
+        if 'rgb' in args.pc_attribs: 
+            columns.append(P[:,index:index+3])
+            index=index+3
+        if 'e' in args.pc_attribs: 
+            columns.append(P[:,index,None])
+            index=index+1
+        if 'lpsv' in args.pc_attribs: 
+            columns.append(P[:,index:index+4])
+            index=index+4
+        if 'XYZ' in args.pc_attribs: 
+            columns.append(P[:,index:index+3])
+            index=index+3
+        if 'd' in args.pc_attribs: 
+            columns.append(P[:,index])
+
         P = np.concatenate(columns, axis=1)
 
     if train:
