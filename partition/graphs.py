@@ -3,6 +3,7 @@
 #---------     Loic Landrieu, Dec. 2017     -----------------------------------
 #------------------------------------------------------------------------------
 import numpy as np
+from numpy.matlib import repmat
 from sklearn.neighbors import NearestNeighbors
 from scipy.spatial import Delaunay
 from numpy import linalg as LA
