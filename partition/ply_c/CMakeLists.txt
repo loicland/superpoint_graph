@@ -12,7 +12,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -fopenmp -O3")
 ### Find required packages ###
 ##############################
 
-find_package(Boost 1.65.1 COMPONENTS python numpy REQUIRED)
+find_package(Boost 1.65.1 COMPONENTS python3 numpy3 REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
@@ -26,7 +26,7 @@ INCLUDE_DIRECTORIES(${EIGEN3_INCLUDE_DIR})
 
 #SET(PYTHON_LIBRARIES /usr/lib/x86_64-linux-gnu/libpython2.7.so)
 #SET(PYTHON_INCLUDE_DIRS /usr/include/python2.7)
-find_package(PythonLibs)
+find_package(PythonLibs 3 REQUIRED)
 message("PYTHON LIBRARIES ARE " ${PYTHON_LIBRARIES})
 INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_DIRS})
 LINK_DIRECTORIES(${PYTHON_LIBRARY_DIRS})
