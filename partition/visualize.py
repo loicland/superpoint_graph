@@ -41,6 +41,8 @@ if args.dataset == 's3dis':
     n_labels = 13
 if args.dataset == 'sema3d':
     n_labels = 8   
+if args.dataset == 'vkitti':
+    n_labels = 13
 if args.dataset == 'custom_dataset':
     n_labels = 10    
 #---load the values------------------------------------------------------------
