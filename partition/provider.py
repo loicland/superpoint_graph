@@ -608,7 +608,7 @@ def interpolate_labels_batch(data_file, xyz, labels, ver_batch):
     """interpolate the labels of the pruned cloud to the full cloud"""
     if len(labels.shape) > 1 and labels.shape[1] > 1:
         labels = np.argmax(labels, axis = 1)
-    i_rows = 0
+    i_rows = None
     labels_f = np.zeros((0, ), dtype='uint8')
     #---the clouds can potentially be too big to parse directly---
     #---they are cut in batches in the order they are stored---
@@ -639,7 +639,10 @@ def interpolate_labels_batch(data_file, xyz, labels, ver_batch):
         distances, neighbor = nn.kneighbors(xyz_full)
         del distances
         labels_f = np.hstack((labels_f, labels[neighbor].flatten()))
-        i_rows = i_rows + ver_batch
+        if i_rows is None:
+            i_rows = ver_batch
+        else:
+            i_rows = i_rows + ver_batch
     return labels_f
 #------------------------------------------------------------------------------
 def interpolate_labels(xyz_up, xyz, labels, ver_batch):
