@@ -616,7 +616,10 @@ def interpolate_labels_batch(data_file, xyz, labels, ver_batch):
     while True:
         try:
             if ver_batch>0:
-                print("read lines %d to %d" % (i_rows, i_rows + ver_batch))
+                if i_rows is None:
+                    print("read lines %d to %d" % (0, ver_batch))
+                else:
+                    print("read lines %d to %d" % (i_rows, i_rows + ver_batch))
                 #vertices = np.genfromtxt(data_file
                 #         , delimiter=' ', max_rows=ver_batch
                 #        , skip_header=i_rows)
