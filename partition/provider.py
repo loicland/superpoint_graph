@@ -158,7 +158,24 @@ def get_color_from_label(object_label, dataset):
             1: [ 255, 0, 0], #'classe A' -> red
             2: [ 0, 255, 0], #'classeB' -> green
             }.get(object_label, -1)
-    else: 
+    elif (dataset == 'vkitti'):  #vkitti3D
+        object_label = {
+            0: [200, 90, 0], #Terrain -> brown
+            1: [0, 128, 50], #Tree -> dark green
+            2: [0, 220, 0],  #Vegetation ->	bright green
+            3: [255, 0, 0],  #Building -> red
+            4: [100, 100, 100], #Road -> dark gray
+            5: [200, 200, 200], #GuardRail -> bright gray
+            6: [255, 0, 255],   #TrafficSign -> pink
+            7: [255, 255, 0], #TrafficLight	-> yellow
+            8: [128, 0, 255], #Pole	-> violet
+            9: [255, 200, 150], #Misc -> skin
+            10:[0, 128, 255], #Truck -> dark blue
+            11:[0, 200, 255], #Car -> bright blue
+            12:[255, 128, 0], #Van -> orange
+            13:[0, 0, 0], 	#Don't care -> black
+        }.get(object_label, -1)
+    else:
         raise ValueError('Unknown dataset: %s' % (dataset))
     if object_label == -1:
         raise ValueError('Type not recognized: %s' % (object_label))
