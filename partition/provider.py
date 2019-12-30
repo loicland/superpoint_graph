@@ -152,6 +152,23 @@ def get_color_from_label(object_label, dataset):
             7: [   0, 255, 255], #'artifact'   ->  cyan
             8: [ 255,   8, 127], #'cars'  ->  pink
             }.get(object_label, -1)
+    elif (dataset == 'vkitti'): #Semantic3D
+        object_label =  {
+            0:  [   0,   0,   0], # None-> black
+            1:  [ 200,  90,   0], # Terrain .->.brown
+            2:  [   0, 128,  50], # Tree  -> dark green
+            3:  [   0, 220,   0], # Vegetation-> bright green
+            4:  [ 255,   0,   0], # Building-> red
+            5:  [ 100, 100, 100] , # Road-> dark gray
+            6:  [ 200, 200, 200], # GuardRail-> bright gray
+            7:  [ 255,   0, 255], # TrafficSign-> pink
+            8:  [ 255, 255,   0], # TrafficLight-> yellow
+            9:  [ 128,   0, 255], # Pole-> violet
+            10:  [ 255, 200, 150], # Misc-> skin
+            11: [   0, 128, 255], # Truck-> dark blue
+            12: [   0, 200, 255], # Car-> bright blue
+            13: [ 255, 128,   0], # Van-> orange
+            }.get(object_label, -1)
     elif (dataset == 'custom_dataset'): #Custom set
         object_label =  {
             0: [0   ,   0,   0], #unlabelled .->. black
