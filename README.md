@@ -72,7 +72,9 @@ cd build
 cmake .. -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.6m.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.6m -DBOOST_INCLUDEDIR=$CONDAENV/include -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
 make
 ```
-The code was tested on Ubuntu 14 and 16 with Python 3.5 to 3.8 and PyTorch 0.2 to 1.1.
+*6.* (optional) Install [Pytorch Geometric](https://github.com/rusty1s/pytorch_geometric)
+
+The code was tested on Ubuntu 14 and 16 with Python 3.5 to 3.8 and PyTorch 0.2 to 1.3.
 
 ### Troubleshooting
 
@@ -95,6 +97,8 @@ Currently supported dataset are as follow:
 | Semantic3D |  yes                  | to come soon      |
 | vKITTI3D   |  no                   | yes               |
 | ScanNet    |  to come soon         | to come soon      |
+
+To use pytorch-geometric graph convolutions instead of our own, use the option `--use_pyg 1` in `./learning/main.py`. Their code is more stable and just as fast. Otherwise, use `--use_pyg 0` 
 
 #### Evaluation
 
@@ -146,6 +150,8 @@ To refer to the handcrafted partition (code in `/partition`) step specifically, 
 *Weakly Supervised Segmentation-Aided Classification of Urban Scenes from 3D LiDAR Point Clouds*, Stéphane Guinard and Loic Landrieu. ISPRS Workshop, 2017.
 
 To refer to the L0-cut pursuit algorithm (code in `github.com/loicland/cut-pursuit`)  specifically, refer to:<br/>
-*Cut Pursuit: Fast Algorithms to Learn Piecewise Constant Functions on General Weighted Graphs*, Loic Landrieu and Guillaume Obozinski, SIAM Journal on Imaging Sciences, 2017.
+*Cut Pursuit: Fast Algorithms to Learn Piecewise Constant Functions on General Weighted Graphs*, Loic Landrieu and Guillaume Obozinski, SIAM Journal on Imaging Sciences, 2017
+
+To refer to pytorch geometric implementation, see their bibtex in [their repo](https://github.com/rusty1s/pytorch_geometric).
 
 

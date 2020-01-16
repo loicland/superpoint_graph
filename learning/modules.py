@@ -13,6 +13,117 @@ import torch.nn.functional as nnf
 from torch.autograd import Variable
 from learning import ecc
 
+HAS_PYG = False
+try:
+    from torch_geometric.nn.conv import MessagePassing
+    from torch_geometric.nn.inits import uniform
+    HAS_PYG = True
+except:
+    pass
+
+if HAS_PYG:
+    class NNConv(MessagePassing):
+        r"""The continuous kernel-based convolutional operator from the
+        `"Neural Message Passing for Quantum Chemistry"
+        <https://arxiv.org/abs/1704.01212>`_ paper.
+        This convolution is also known as the edge-conditioned convolution from the
+        `"Dynamic Edge-Conditioned Filters in Convolutional Neural Networks on
+        Graphs" <https://arxiv.org/abs/1704.02901>`_ paper (see
+        :class:`torch_geometric.nn.conv.ECConv` for an alias):
+
+        .. math::
+            \mathbf{x}^{\prime}_i = \mathbf{\Theta} \mathbf{x}_i +
+            \sum_{j \in \mathcal{N}(i)} \mathbf{x}_j \cdot
+            h_{\mathbf{\Theta}}(\mathbf{e}_{i,j}),
+
+        where :math:`h_{\mathbf{\Theta}}` denotes a neural network, *.i.e.*
+        a MLP.
+
+        Args:
+            in_channels (int): Size of each input sample.
+            out_channels (int): Size of each output sample.
+            nn (torch.nn.Module): A neural network :math:`h_{\mathbf{\Theta}}` that
+                maps edge features :obj:`edge_attr` of shape :obj:`[-1,
+                num_edge_features]` to shape
+                    :obj:`[-1, in_channels * out_channels]`, *e.g.*, defined by
+                    :class:`torch.nn.Sequential`.
+                aggr (string, optional): The aggregation scheme to use
+                    (:obj:`"add"`, :obj:`"mean"`, :obj:`"max"`).
+                    (default: :obj:`"add"`)
+                root_weight (bool, optional): If set to :obj:`False`, the layer will
+                    not add the transformed root node features to the output.
+                    (default: :obj:`True`)
+                bias (bool, optional): If set to :obj:`False`, the layer will not learn
+                    an additive bias. (default: :obj:`True`)
+                **kwargs (optional): Additional arguments of
+                    :class:`torch_geometric.nn.conv.MessagePassing`.
+            """
+        def __init__(self,
+                    in_channels,
+                    out_channels,
+                    aggr='mean',
+                    root_weight=False,
+                    bias=False,
+                    vv=True,
+                    flow="target_to_source",
+                    negative_slope=0.2,
+                    softmax=False,
+                    **kwargs):
+            super(NNConv, self).__init__(aggr=aggr, **kwargs)
+
+            self.in_channels = in_channels
+            self.out_channels = out_channels
+            self.aggr = aggr
+            self.vv = vv
+            self.negative_slope = negative_slope
+            self.softmax = softmax
+
+            if root_weight:
+                self.root = Parameter(torch.Tensor(in_channels, out_channels))
+            else:
+                self.register_parameter('root', None)
+
+            if bias:
+                self.bias = Parameter(torch.Tensor(out_channels))
+            else:
+                self.register_parameter('bias', None)
+
+            self.reset_parameters()
+
+        def reset_parameters(self):
+            uniform(self.in_channels, self.root)
+            uniform(self.in_channels, self.bias)
+
+        def forward(self, x, edge_index, weights):
+            """"""
+            x = x.unsqueeze(-1) if x.dim() == 1 else x
+            return self.propagate(edge_index, x=x, weights=weights)
+
+        def message(self, edge_index_i, x_j, size_i, weights):
+            if not self.vv:
+                weight = weights.view(-1, self.in_channels, self.out_channels)
+                if self.softmax: # APPLY A TWO DIMENSIONAL NON-DEPENDENT SPARSE SOFTMAX
+                    weight = F.leaky_relu(weight, self.negative_slope)
+                    weight = torch.cat([softmax(weight[:, k, :], edge_index_i, size_i).unsqueeze(1) for k in range(self.out_channels)], dim=1)
+                return torch.matmul(x_j.unsqueeze(1), weight).squeeze(1)
+            else:
+                weight = weights.view(-1, self.in_channels)
+                if self.softmax:
+                    weight = F.leaky_relu(weight, self.negative_slope)
+                    weight = torch.cat([softmax(w.unsqueeze(-1), edge_index_i, size_i).t() for w in weight.t()], dim=0).t()
+                return x_j *  weight
+
+        def update(self, aggr_out, x):
+            if self.root is not None:
+                aggr_out = aggr_out + torch.mm(x, self.root)
+            if self.bias is not None:
+                aggr_out = aggr_out + self.bias
+            return aggr_out
+
+        def __repr__(self):
+            return '{}({}, {})'.format(self.__class__.__name__, self.in_channels,
+                                        self.out_channels)
+
 
 class RNNGraphConvModule(nn.Module):
     """
@@ -20,7 +131,7 @@ class RNNGraphConvModule(nn.Module):
     Its result is passed to RNN `cell` and the process is repeated over `nrepeats` iterations.
     Weight sharing over iterations is done both in RNN cell and in Filter generating network.
     """
-    def __init__(self, cell, filter_net, gc_info=None, nrepeats=1, cat_all=False, edge_mem_limit=1e20):
+    def __init__(self, cell, filter_net, nfeat, vv = True, gc_info=None, nrepeats=1, cat_all=False, edge_mem_limit=1e20, use_pyg = True, cuda = True):
         super(RNNGraphConvModule, self).__init__()
         self._cell = cell
         self._isLSTM = 'LSTM' in type(cell).__name__
@@ -29,6 +140,11 @@ class RNNGraphConvModule(nn.Module):
         self._cat_all = cat_all
         self._edge_mem_limit = edge_mem_limit
         self.set_info(gc_info)
+        self.use_pyg = use_pyg
+        if use_pyg:
+            self.nn = NNConv(nfeat, nfeat, vv = vv)
+            if cuda:
+                self.nn = self.nn.cuda()
 
     def set_info(self, gc_info):
         self._gci = gc_info
@@ -36,7 +152,9 @@ class RNNGraphConvModule(nn.Module):
     def forward(self, hx):
         # get graph structure information tensors
         idxn, idxe, degs, degs_gpu, edgefeats = self._gci.get_buffers()
-        edgefeats = Variable(edgefeats, requires_grad=False)
+
+        edge_indexes = self._gci.get_pyg_buffers()
+        ###edgefeats = Variable(edgefeats, requires_grad=False)
 
         # evalute and reshape filter weights (shared among RNN iterations)
         weights = self._fnet(edgefeats)
@@ -51,7 +169,11 @@ class RNNGraphConvModule(nn.Module):
             cx = Variable(hx.data.new(hx.size()).fill_(0))
 
         for r in range(self._nrepeats):
-            input = ecc.GraphConvFunction(nc, nc, idxn, idxe, degs, degs_gpu, self._edge_mem_limit)(hx, weights)
+            if self.use_pyg:
+                input = self.nn(hx, edge_indexes, weights)
+            else:
+                input = ecc.GraphConvFunction.apply(hx, weights, nc, nc, idxn, idxe, degs, degs_gpu,
+                                                    self._edge_mem_limit)
             if self._isLSTM:
                 hx, cx = self._cell(input, (hx, cx))
             else:
@@ -59,7 +181,6 @@ class RNNGraphConvModule(nn.Module):
             hxs.append(hx)
 
         return torch.cat(hxs,1) if self._cat_all else hx
-
 
 class ECC_CRFModule(nn.Module):
     """

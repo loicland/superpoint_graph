@@ -152,7 +152,7 @@ def get_color_from_label(object_label, dataset):
             7: [   0, 255, 255], #'artifact'   ->  cyan
             8: [ 255,   8, 127], #'cars'  ->  pink
             }.get(object_label, -1)
-    elif (dataset == 'vkitti'): #Semantic3D
+    elif (dataset == 'vkitti'): #vkitti3D
         object_label =  {
             0:  [   0,   0,   0], # None-> black
             1:  [ 200,  90,   0], # Terrain .->.brown

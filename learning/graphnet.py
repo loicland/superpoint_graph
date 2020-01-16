@@ -37,7 +37,7 @@ def create_fnet(widths, orthoinit, llbias, bnidx=-1):
 class GraphNetwork(nn.Module):
     """ It is constructed in a flexible way based on `config` string, which contains sequence of comma-delimited layer definiton tokens layer_arg1_arg2_... See README.md for examples.
     """
-    def __init__(self, config, nfeat, fnet_widths, fnet_orthoinit=True, fnet_llbias=True, fnet_bnidx=-1, edge_mem_limit=1e20):
+    def __init__(self, config, nfeat, fnet_widths, fnet_orthoinit=True, fnet_llbias=True, fnet_bnidx=-1, edge_mem_limit=1e20, use_pyg = True, cuda = True):
         super(GraphNetwork, self).__init__()
         self.gconvs = []
 
@@ -75,7 +75,7 @@ class GraphNetwork(nn.Module):
                     cell = GRUCellEx(nfeat, nfeat, bias=True, layernorm=layernorm, ingate=ingate)
                 else:
                     cell = LSTMCellEx(nfeat, nfeat, bias=True, layernorm=layernorm, ingate=ingate)
-                gconv = RNNGraphConvModule(cell, fnet, nrepeats=nrepeats, cat_all=cat_all, edge_mem_limit=edge_mem_limit)
+                gconv = RNNGraphConvModule(cell, fnet, nfeat, vv = vv, nrepeats=nrepeats, cat_all=cat_all, edge_mem_limit=edge_mem_limit, use_pyg = use_pyg, cuda = cuda)
                 self.add_module(str(d), gconv)
                 self.gconvs.append(gconv)
                 if cat_all: nfeat *= nrepeats + 1

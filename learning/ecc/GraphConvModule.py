@@ -15,12 +15,14 @@ from .GraphConvInfo import GraphConvInfo
 from . import cuda_kernels
 from . import utils
 
-class GraphConvFunction(Function):
-    """ Computes operations for each edge and averages the results over respective nodes. The operation is either matrix-vector multiplication (for 3D weight tensors) or element-wise vector-vector multiplication (for 2D weight tensors). The evaluation is computed in blocks of size `edge_mem_limit` to reduce peak memory load. See `GraphConvInfo` for info on `idxn, idxe, degs`.
-    """
 
-    def __init__(self, in_channels, out_channels, idxn, idxe, degs, degs_gpu, edge_mem_limit=1e20):
-        super(GraphConvFunction, self).__init__()
+class GraphConvFunction(Function):
+    """Computes operations for each edge and averages the results over respective nodes.
+    The operation is either matrix-vector multiplication (for 3D weight tensors) or element-wise
+    vector-vector multiplication (for 2D weight tensors). The evaluation is computed in blocks of
+    size `edge_mem_limit` to reduce peak memory load. See `GraphConvInfo` for info on `idxn, idxe, degs`.
+    """
+    def init(self, in_channels, out_channels, idxn, idxe, degs, degs_gpu, edge_mem_limit=1e20):
         self._in_channels = in_channels
         self._out_channels = out_channels
         self._idxn = idxn
@@ -29,105 +31,125 @@ class GraphConvFunction(Function):
         self._degs_gpu = degs_gpu
         self._shards = utils.get_edge_shards(degs, edge_mem_limit)
 
-    def _multiply(self, a, b, out, f_a=None, f_b=None):
-        """ Performs operation on edge weights and node signal """
-        if self._full_weight_mat:
+    def _multiply(ctx, a, b, out, f_a=None, f_b=None):
+        """Performs operation on edge weights and node signal"""
+        if ctx._full_weight_mat:
             # weights are full in_channels x out_channels matrices -> mm
             torch.bmm(f_a(a) if f_a else a, f_b(b) if f_b else b, out=out)
         else:
             # weights represent diagonal matrices -> mul
             torch.mul(a, b.expand_as(a), out=out)
-       
-    def forward(self, input, weights):
-        self.save_for_backward(input, weights)
 
-        self._full_weight_mat = weights.dim()==3
-        assert self._full_weight_mat or (self._in_channels==self._out_channels and weights.size(1) == self._in_channels)
+    @staticmethod
+    def forward(ctx, input, weights, in_channels, out_channels, idxn, idxe, degs, degs_gpu, edge_mem_limit=1e20):
 
-        output = input.new(self._degs.numel(), self._out_channels)       
-        
+        ctx.save_for_backward(input, weights)
+        ctx._in_channels = in_channels
+        ctx._out_channels = out_channels
+        ctx._idxn = idxn
+        ctx._idxe = idxe
+        ctx._degs = degs
+        ctx._degs_gpu = degs_gpu
+        ctx._shards = utils.get_edge_shards(degs, edge_mem_limit)
+
+        ctx._full_weight_mat = weights.dim() == 3
+        assert ctx._full_weight_mat or (
+                in_channels == out_channels and weights.size(1) == in_channels)
+
+        output = input.new(degs.numel(), out_channels)
+
         # loop over blocks of output nodes
         startd, starte = 0, 0
-        for numd, nume in self._shards:            
+        for numd, nume in ctx._shards:
 
-            # select sequence of matching pairs of node and edge weights            
-            sel_input = torch.index_select(input, 0, self._idxn.narrow(0,starte,nume))
-            
-            if self._idxe is not None:
-                sel_weights = torch.index_select(weights, 0, self._idxe.narrow(0,starte,nume))
+            # select sequence of matching pairs of node and edge weights
+            sel_input = torch.index_select(input, 0, idxn.narrow(0, starte, nume))
+
+            if ctx._idxe is not None:
+                sel_weights = torch.index_select(weights, 0, idxe.narrow(0, starte, nume))
             else:
-                sel_weights = weights.narrow(0,starte,nume)
-                
+                sel_weights = weights.narrow(0, starte, nume)
+
             # compute matrix-vector products
             products = input.new()
-            self._multiply(sel_input, sel_weights, products, lambda a: a.unsqueeze(1))
+            GraphConvFunction._multiply(ctx, sel_input, sel_weights, products, lambda a: a.unsqueeze(1))
 
             # average over nodes
-            if self._idxn.is_cuda:
-                cuda_kernels.conv_aggregate_fw(output.narrow(0,startd,numd), products.view(-1,self._out_channels), self._degs_gpu.narrow(0,startd,numd))
+            if ctx._idxn.is_cuda:
+                cuda_kernels.conv_aggregate_fw(output.narrow(0, startd, numd), products.view(-1, ctx._out_channels),
+                                               ctx._degs_gpu.narrow(0, startd, numd))
             else:
                 k = 0
-                for i in range(startd, startd+numd):
-                    if self._degs[i]>0:
-                        torch.mean(products.narrow(0,k,self._degs[i]), 0, out=output[i])
+                for i in range(startd, startd + numd):
+                    if ctx._degs[i] > 0:
+                        torch.mean(products.narrow(0, k, ctx._degs[i]), 0, out=output[i])
                     else:
                         output[i].fill_(0)
-                    k = k + self._degs[i]
- 
+                    k = k + ctx._degs[i]
+
             startd += numd
-            starte += nume  
+            starte += nume
             del sel_input, sel_weights, products
-        
+
         return output
 
-    def backward(self, grad_output):
-        input, weights = self.saved_tensors
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, weights = ctx.saved_tensors
 
         grad_input = input.new(input.size()).fill_(0)
         grad_weights = weights.new(weights.size())
-        if self._idxe is not None: grad_weights.fill_(0)
+        if ctx._idxe is not None: grad_weights.fill_(0)
 
         # loop over blocks of output nodes
         startd, starte = 0, 0
-        for numd, nume in self._shards:         
-            
-            grad_products, tmp = input.new(nume, self._out_channels), input.new()
+        for numd, nume in ctx._shards:
 
-            if self._idxn.is_cuda:
-                cuda_kernels.conv_aggregate_bw(grad_products, grad_output.narrow(0,startd,numd), self._degs_gpu.narrow(0,startd,numd))
-            else:           
-                k = 0
-                for i in range(startd, startd+numd):
-                    if self._degs[i]>0:
-                        torch.div(grad_output[i], self._degs[i], out=grad_products[k])
-                        if self._degs[i]>1:
-                            grad_products.narrow(0, k+1, self._degs[i]-1).copy_( grad_products[k].expand(self._degs[i]-1,1,self._out_channels).squeeze(1) )
-                        k = k + self._degs[i]    
+            grad_products, tmp = input.new(nume, ctx._out_channels), input.new()
 
-            # grad wrt weights
-            sel_input = torch.index_select(input, 0, self._idxn.narrow(0,starte,nume))
-            
-            if self._idxe is not None:
-                self._multiply(sel_input, grad_products, tmp, lambda a: a.unsqueeze(1).transpose_(2,1), lambda b: b.unsqueeze(1))
-                grad_weights.index_add_(0, self._idxe.narrow(0,starte,nume), tmp)
+            if ctx._idxn.is_cuda:
+                cuda_kernels.conv_aggregate_bw(grad_products, grad_output.narrow(0, startd, numd),
+                                               ctx._degs_gpu.narrow(0, startd, numd))
             else:
-                self._multiply(sel_input, grad_products, grad_weights.narrow(0,starte,nume), lambda a: a.unsqueeze(1).transpose_(2,1), lambda b: b.unsqueeze(1))
+                k = 0
+                for i in range(startd, startd + numd):
+                    if ctx._degs[i] > 0:
+                        torch.div(grad_output[i], ctx._degs[i], out=grad_products[k])
+                        if ctx._degs[i] > 1:
+                            grad_products.narrow(0, k + 1, ctx._degs[i] - 1).copy_(
+                                grad_products[k].expand(ctx._degs[i] - 1, 1, ctx._out_channels).squeeze(1))
+                        k = k + ctx._degs[i]
+
+                        # grad wrt weights
+            sel_input = torch.index_select(input, 0, ctx._idxn.narrow(0, starte, nume))
+
+            if ctx._idxe is not None:
+                GraphConvFunction._multiply(ctx, sel_input, grad_products, tmp,
+                                            lambda a: a.unsqueeze(1).transpose_(2, 1),
+                                            lambda b: b.unsqueeze(1))
+                grad_weights.index_add_(0, ctx._idxe.narrow(0, starte, nume), tmp)
+            else:
+                GraphConvFunction._multiply(ctx, sel_input, grad_products, grad_weights.narrow(0, starte, nume),
+                                            lambda a: a.unsqueeze(1).transpose_(2, 1), lambda b: b.unsqueeze(1))
 
             # grad wrt input
-            if self._idxe is not None:
-                torch.index_select(weights, 0, self._idxe.narrow(0,starte,nume), out=tmp)
-                self._multiply(grad_products, tmp, sel_input, lambda a: a.unsqueeze(1), lambda b: b.transpose_(2,1))
+            if ctx._idxe is not None:
+                torch.index_select(weights, 0, ctx._idxe.narrow(0, starte, nume), out=tmp)
+                GraphConvFunction._multiply(ctx, grad_products, tmp, sel_input, lambda a: a.unsqueeze(1),
+                                            lambda b: b.transpose_(2, 1))
                 del tmp
             else:
-                self._multiply(grad_products, weights.narrow(0,starte,nume), sel_input, lambda a: a.unsqueeze(1), lambda b: b.transpose_(2,1))
+                GraphConvFunction._multiply(ctx, grad_products, weights.narrow(0, starte, nume), sel_input,
+                                            lambda a: a.unsqueeze(1),
+                                            lambda b: b.transpose_(2, 1))
 
-            grad_input.index_add_(0, self._idxn.narrow(0,starte,nume), sel_input)
-                    
+            grad_input.index_add_(0, ctx._idxn.narrow(0, starte, nume), sel_input)
+
             startd += numd
-            starte += nume  
+            starte += nume
             del grad_products, sel_input
-       
-        return grad_input, grad_weights
+
+        return grad_input, grad_weights, None, None, None, None, None, None, None
 
 
 

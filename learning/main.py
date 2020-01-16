@@ -70,6 +70,7 @@ def main():
     parser.add_argument('--S3DIS_PATH', default='datasets/s3dis')
     parser.add_argument('--VKITTI_PATH', default='datasets/vkitti')
     parser.add_argument('--CUSTOM_SET_PATH', default='datasets/custom_set')
+    parser.add_argument('--use_pyg', default=0, type=int, help='Wether to use Pytorch Geometric for graph convolutions')
 
     # Model
     parser.add_argument('--model_config', default='gru_10,f_8', help='Defines the model as a sequence of layers, see graphnet.py for definitions of respective layers and acceptable arguments. In short: rectype_repeats_mv_layernorm_ingate_concat, with rectype the type of recurrent unit [gru/crf/lstm], repeats the number of message passing iterations, mv (default True) the use of matrix-vector (mv) instead vector-vector (vv) edge filters, layernorm (default True) the use of layernorms in the recurrent units, ingate (default True) the use of input gating, concat (default True) the use of state concatenation')
@@ -107,11 +108,16 @@ def main():
     parser.add_argument('--ptn_prelast_do', default=0, type=float)
     parser.add_argument('--ptn_mem_monger', default=1, type=int, help='Bool, save GPU memory by recomputing PointNets in back propagation.')
 
+    # Decoder
+    parser.add_argument('--sp_decoder_config', default="[]", type=str,
+                        help='Size of the decoder : sp_embedding -> sp_class. First layer of size sp_embed (* (1+n_ecc_iteration) if concatenation) and last layer is n_classes')
+
     args = parser.parse_args()
     args.start_epoch = 0
     args.lr_steps = ast.literal_eval(args.lr_steps)
     args.fnet_widths = ast.literal_eval(args.fnet_widths)
     args.ptn_widths = ast.literal_eval(args.ptn_widths)
+    args.sp_decoder_config = ast.literal_eval(args.sp_decoder_config)
     args.ptn_widths_stn = ast.literal_eval(args.ptn_widths_stn)
 
 
@@ -125,6 +131,9 @@ def main():
     logging.getLogger().setLevel(logging.INFO)  #set to logging.DEBUG to allow for more prints
     if (args.dataset=='sema3d' and args.db_test_name.startswith('test')) or (args.dataset.startswith('s3dis_02') and args.cvfold==2):
         # needed in pytorch 0.2 for super-large graphs with batchnorm in fnet  (https://github.com/pytorch/pytorch/pull/2919)
+        torch.backends.cudnn.enabled = False
+
+    if args.use_pyg:
         torch.backends.cudnn.enabled = False
 
     # Decide on the dataset
@@ -405,7 +414,7 @@ def create_model(args, dbinfo):
     model = nn.Module()
 
     nfeat = args.ptn_widths[1][-1]
-    model.ecc = graphnet.GraphNetwork(args.model_config, nfeat, [dbinfo['edge_feats']] + args.fnet_widths, args.fnet_orthoinit, args.fnet_llbias,args.fnet_bnidx, args.edge_mem_limit)
+    model.ecc = graphnet.GraphNetwork(args.model_config, nfeat, [dbinfo['edge_feats']] + args.fnet_widths, args.fnet_orthoinit, args.fnet_llbias,args.fnet_bnidx, args.edge_mem_limit, use_pyg = args.use_pyg, cuda = args.cuda)
 
     model.ptn = pointnet.PointNet(args.ptn_widths[0], args.ptn_widths[1], args.ptn_widths_stn[0], args.ptn_widths_stn[1], dbinfo['node_feats'], args.ptn_nfeat_stn, prelast_do=args.ptn_prelast_do)
 

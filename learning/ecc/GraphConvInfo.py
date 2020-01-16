@@ -42,9 +42,10 @@ class GraphConvInfo(object):
         p = 0
         idxn = []
         degrees = []
+        edge_indexes = []
         edgeattrs = defaultdict(list)
                 
-        for i,G in enumerate(graphs):
+        for G in graphs:
             E = np.array(G.get_edgelist())
             idx = E[:,1].argsort() # sort by target
             
@@ -53,6 +54,7 @@ class GraphConvInfo(object):
             for a in G.es.attributes():
                 edgeattrs[a] += edgeseq.get_attribute_values(a)
             degrees += G.indegree(G.vs, loops=True)
+            edge_indexes.append(np.asarray(p + E[idx]))
             p += G.vcount()
               
         self._edgefeats, self._idxe = edge_feat_func(edgeattrs)
@@ -62,15 +64,23 @@ class GraphConvInfo(object):
             assert self._idxe.numel() == self._idxn.numel()
             
         self._degrees = torch.LongTensor(degrees)
-        self._degrees_gpu = None            
+        self._degrees_gpu = None
+
+        self._edge_indexes = torch.LongTensor(np.concatenate(edge_indexes).T)
         
     def cuda(self):
         self._idxn = self._idxn.cuda()
         if self._idxe is not None: self._idxe = self._idxe.cuda()
         self._degrees_gpu = self._degrees.cuda()
-        self._edgefeats = self._edgefeats.cuda()        
+        self._edgefeats = self._edgefeats.cuda()
+        self._edge_indexes = self._edge_indexes.cuda()
         
     def get_buffers(self):
         """ Provides data to `GraphConvModule`.
         """
         return self._idxn, self._idxe, self._degrees, self._degrees_gpu, self._edgefeats
+
+    def get_pyg_buffers(self):
+        """ Provides data to `GraphConvModule`.
+        """
+        return self._edge_indexes
