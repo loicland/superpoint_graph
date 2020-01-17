@@ -356,11 +356,13 @@ def main():
 
         stats.append({'epoch': epoch, 'acc': acc, 'loss': loss, 'oacc': oacc, 'avg_iou': avg_iou, 'acc_test': acc_test, 'oacc_test': oacc_test, 'avg_iou_test': avg_iou_test, 'avg_acc_test': avg_acc_test, 'best_iou' : best_iou})
 
+        """
         if epoch % args.save_nth_epoch == 0 or epoch==args.epochs-1:
             with open(os.path.join(args.odir, 'trainlog.json'), 'w') as outfile:
                 json.dump(stats, outfile,indent=4)
             torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(), 'optimizer' : optimizer.state_dict(), 'scaler': scaler},
                        os.path.join(args.odir, 'model.pth.tar'))
+        """
         
         if math.isnan(loss): break
     
