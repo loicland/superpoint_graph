@@ -413,6 +413,10 @@ def resume(args, dbinfo):
     
 def create_model(args, dbinfo):
     """ Creates model """
+
+    if not 'use_pyg' in args:
+        args.use_pyg = 0
+
     model = nn.Module()
 
     nfeat = args.ptn_widths[1][-1]
