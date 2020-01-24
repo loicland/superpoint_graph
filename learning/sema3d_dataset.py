@@ -87,7 +87,10 @@ def preprocess_pointclouds(SEMA3D_PATH):
     class_count = np.zeros((8,),dtype='int')
     for n in ['train', 'test_reduced', 'test_full']:
         pathP = '{}/parsed/{}/'.format(SEMA3D_PATH, n)
-        pathD = '{}/features_supervision/{}/'.format(SEMA3D_PATH, n)
+        if args.supervised_partition :
+            pathD = '{}/features_supervision/{}/'.format(SEMA3D_PATH, n)
+        else:
+            pathD = '{}/features/{}/'.format(SEMA3D_PATH, n)
         pathC = '{}/superpoint_graphs/{}/'.format(SEMA3D_PATH, n)
         if not os.path.exists(pathP):
             os.makedirs(pathP)
@@ -135,5 +138,6 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs')
     parser.add_argument('--SEMA3D_PATH', default='datasets/semantic3d')
+    parser.add_argument('--supervised_partition', default=0, type=int, help = 'wether to use supervized partition features')
     args = parser.parse_args()
     preprocess_pointclouds(args.SEMA3D_PATH)
