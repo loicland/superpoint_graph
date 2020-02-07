@@ -142,24 +142,33 @@ def loader(entry, train, args, db_path, test_seed_offset=0):
         if 0 < args.spg_augm_hardcutoff < G.vcount():
             G = k_big_enough(G, args.ptn_minpts, args.spg_augm_hardcutoff)
 
-    # 2) loading clouds for chosen superpoint graph nodes
-    clouds_meta, clouds_flag = [], [] # meta: textual id of the superpoint; flag: 0/-1 if no cloud because too small
-    clouds, clouds_global = [], [] # clouds: point cloud arrays; clouds_global: diameters before scaling
+    # Only stores graph with edges
+    if len(G.get_edgelist()) != 0:
+        # 2) loading clouds for chosen superpoint graph nodes
+        clouds_meta, clouds_flag = [], [] # meta: textual id of the superpoint; flag: 0/-1 if no cloud because too small
+        clouds, clouds_global = [], [] # clouds: point cloud arrays; clouds_global: diameters before scaling
 
-    for s in range(G.vcount()):
-        cloud, diam = load_superpoint(args, db_path + '/parsed/' + fname + '.h5', G.vs[s]['v'], train, test_seed_offset)
-        if cloud is not None:
-            clouds_meta.append('{}.{:d}'.format(fname,G.vs[s]['v'])); clouds_flag.append(0)
-            clouds.append(cloud.T)
-            clouds_global.append(diam)
-        else:
-            clouds_meta.append('{}.{:d}'.format(fname,G.vs[s]['v'])); clouds_flag.append(-1)
+        for s in range(G.vcount()):
+            cloud, diam = load_superpoint(args, db_path + '/parsed/' + fname + '.h5', G.vs[s]['v'], train, test_seed_offset)
+            if cloud is not None:
+                clouds_meta.append('{}.{:d}'.format(fname,G.vs[s]['v'])); clouds_flag.append(0)
+                clouds.append(cloud.T)
+                clouds_global.append(diam)
+            else:
+                clouds_meta.append('{}.{:d}'.format(fname,G.vs[s]['v'])); clouds_flag.append(-1)
 
-    clouds_flag = np.array(clouds_flag)
-    clouds = np.stack(clouds)
-    clouds_global = np.concatenate(clouds_global)
+        clouds_flag = np.array(clouds_flag)
+        if len(clouds) != 0:
+            clouds = np.stack(clouds)
+        if len(clouds_global) != 0:
+            clouds_global = np.concatenate(clouds_global)
 
-    return np.array(G.vs['t']), G, clouds_meta, clouds_flag, clouds, clouds_global
+        return np.array(G.vs['t']), G, clouds_meta, clouds_flag, clouds, clouds_global
+
+    # Don't use the graph if it doesn't have edges.
+    else:
+        target, G, clouds_meta, clouds_flag, clouds, clouds_global = None, None, None, None, None, None
+        return target, G, clouds_meta, clouds_flag, clouds, clouds_global
 
 
 def cloud_edge_feats(edgeattrs):
@@ -171,14 +180,15 @@ def eccpc_collate(batch):
     """
     targets, graphs, clouds_meta, clouds_flag, clouds, clouds_global = list(zip(*batch))
 
-    targets = torch.cat([torch.from_numpy(t) for t in targets], 0).long()
+    targets = torch.cat([torch.from_numpy(t) for t in targets if t is not None], 0).long()
+    graphs = [graph for graph in graphs if graph is not None]
     GIs = [ecc.GraphConvInfo(graphs, cloud_edge_feats)]
 
-    if len(clouds_meta[0])>0:
-        clouds = torch.cat([torch.from_numpy(f) for f in clouds], 0)
-        clouds_global = torch.cat([torch.from_numpy(f) for f in clouds_global], 0)
-        clouds_flag = torch.cat([torch.from_numpy(f) for f in clouds_flag], 0)
-        clouds_meta = [item for sublist in clouds_meta for item in sublist]
+    if len(clouds_meta[0]) > 0:
+        clouds = torch.cat([torch.from_numpy(f) for f in clouds if f is not None], 0)
+        clouds_global = torch.cat([torch.from_numpy(f) for f in clouds_global if f is not None], 0)
+        clouds_flag = torch.cat([torch.from_numpy(f) for f in clouds_flag if f is not None], 0)
+        clouds_meta = [item for sublist in clouds_meta if sublist is not None for item in sublist]
 
     return targets, GIs, (clouds_meta, clouds_flag, clouds, clouds_global)
 
