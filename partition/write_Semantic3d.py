@@ -72,4 +72,4 @@ for file in files:
     print("    upsampling...")
     labels_full = reduced_labels2full(labels_red, components, n_ver)
     labels_ups = interpolate_labels_batch(data_file, xyz, labels_full, args.ver_batch)
-    np.savetxt(label_file, labels_ups, delimiter=' ', fmt='%d')   # X is an array
+    np.savetxt(label_file, labels_ups+1, delimiter=' ', fmt='%d')   # X is an array
