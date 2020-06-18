@@ -288,11 +288,11 @@ def read_semantic3d_format(data_file, n_class, file_label_path, voxel_width, ver
     if n_class>0:
         for (i_chunk, (vertex_chunk, label_chunk)) in \
             enumerate(zip(pd.read_csv(data_file,chunksize=ver_batch, delimiter=' '), \
-                pd.read_csv(file_label_path, dtype="u1",chunksize=ver_batch))):
+                pd.read_csv(file_label_path, dtype="u1",chunksize=ver_batch, header=None))):
             print("processing lines %d to %d" % (i_chunk * ver_batch, (i_chunk+1) * ver_batch))
             xyz, rgb, labels = process_chunk(vertex_chunk, label_chunk, 1, xyz, rgb, labels)
     else:
-        for (i_chunk, vertex_chunk) in enumerate(pd.read_csv(data_file, delimiter=' ',chunksize=ver_batch)):
+        for (i_chunk, vertex_chunk) in enumerate(pd.read_csv(data_file, delimiter=' ',chunksize=ver_batch, header=None)):
             print("processing lines %d to %d" % (i_chunk * ver_batch, (i_chunk+1) * ver_batch))
             xyz, rgb, dump = process_chunk(vertex_chunk, None, 0, xyz, rgb, None)
         
@@ -642,12 +642,12 @@ def interpolate_labels_batch(data_file, xyz, labels, ver_batch):
                 #        , skip_header=i_rows)
                 vertices = pd.read_csv(data_file
                          , sep=' ', nrows=ver_batch
-                         , header=i_rows).values
+                         , header=None if i_rows==None else i_rows-1).values
             else:
                 #vertices = np.genfromtxt(data_file
                  #        , delimiter=' ')
                 vertices = pd.read_csv(data_file
-                         , delimiter=' ').values
+                         , delimiter=' ', header=None).values
                 break
         except (StopIteration, pd.errors.ParserError):
             #end of file
