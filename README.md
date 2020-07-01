@@ -18,9 +18,6 @@ by Loic Landrieu and Mohamed Boussaha (CVPR2019),
 
 <img src="http://recherche.ign.fr/llandrieu/SPG/ssp.png" width="900">
 
-## We are recruting! A PhD student for an extension of SPG to 4D data, see the [proposal](http://recherche.ign.fr/llandrieu/PhD_proposal_READY3D.pdf).
-
-
 ## Code structure
 * `./partition/*` - Partition code (geometric partitioning and superpoint graph construction using handcrafted features)
 * `./supervized_partition/*` - Supervized partition code (partitioning with learned features)
