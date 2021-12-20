@@ -407,6 +407,19 @@ def read_las(filename):
     z = np.reshape(inFile.z, (N_points,1))
     xyz = np.hstack((x,y,z)).astype('f4')
     return xyz
+
+#------------------------------------------------------------------------------
+import pypcd
+from pypcd import pypcd
+def read_pcd(filename):
+   """convert from a pcd file with no rgb"""
+    #---read the pcd file--------
+    pcddata = pypcd.PointCloud.from_path(filename)
+    xyz = np.mat(np.stack([pcddata.pc_data[n] for n in ['x', 'y', 'z']]))
+    labels = np.mat(np.mat(pcddata.pc_data['label']))
+    return xyz.T ,labels.T
+
+
 #------------------------------------------------------------------------------
 def write_ply_obj(filename, xyz, rgb, labels, object_indices):
     """write into a ply file. include the label and the object number"""
