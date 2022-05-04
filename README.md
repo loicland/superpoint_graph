@@ -4,13 +4,13 @@
 
 This is the official PyTorch implementation of the papers:
 
-*Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs* <http://arxiv.org/abs/1711.09869>
+[*Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs*](http://arxiv.org/abs/1711.09869)
 
 by Loic Landrieu and Martin Simonovski (CVPR2018),
 
 and 
 
-*Point Cloud Oversegmentation with Graph-Structured Deep Metric Learning* <https://arxiv.org/pdf/1904.02113>.
+[*Point Cloud Oversegmentation with Graph-Structured Deep Metric Learning*](https://arxiv.org/pdf/1904.02113).
 
 by Loic Landrieu and Mohamed Boussaha (CVPR2019),
 
