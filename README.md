@@ -1,6 +1,9 @@
 
 # Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs
 
+⚠️ This repo is no longer maintained! Please check out our brand new [*SuperPoint Transformer*](https://github.com/drprojects/superpoint_transformer), which does everything better! ⚠️
+
+
 
 This is the official PyTorch implementation of the papers:
 
