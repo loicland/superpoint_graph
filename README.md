@@ -44,7 +44,7 @@ pip install git+https://github.com/pytorch/tnt.git@master
 
 *2.* Install additional Python packages:
 ```
-pip install future python-igraph tqdm transforms3d pynvrtc fastrlock cupy h5py sklearn plyfile scipy pandas
+pip install future igraph tqdm transforms3d pynvrtc fastrlock cupy h5py sklearn plyfile scipy pandas
 ```
 
 *3.* Install Boost (1.63.0 or newer) and Eigen3, in Conda:<br>
